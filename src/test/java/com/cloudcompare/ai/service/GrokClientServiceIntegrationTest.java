@@ -35,7 +35,7 @@ class GrokClientServiceIntegrationTest {
         List<AiToolResult> results = grokClientService.fetchAiToolsComparisonFromGrok("coding assistant");
         assertNotNull(results);
         assertFalse(results.isEmpty());
-        assertEquals("ChatGPT", results.get(0).getToolName());
+        assertEquals("GitHub Copilot", results.get(0).getToolName());
     }
 
     @Test

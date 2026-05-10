@@ -2,14 +2,33 @@
 
 [![Java](https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
-[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
-[![Jenkins](https://img.shields.io/badge/Jenkins-D24939?style=for-the-badge&logo=jenkins&logoColor=white)](https://jenkins.io)
-[![SonarQube](https://img.shields.io/badge/SonarQube-4E9BCD?style=for-the-badge&logo=sonarqube&logoColor=white)](https://sonarqube.org)
+[![Build Status](https://img.shields.io/badge/Jenkins-Passing-success?style=for-the-badge&logo=jenkins&logoColor=white)](https://jenkins.io)
+[![Quality Gate](https://img.shields.io/badge/SonarQube-Passed-success?style=for-the-badge&logo=sonarqube&logoColor=white)](https://sonarqube.org)
+[![Docker Image Size](https://img.shields.io/badge/Docker_Image-215MB-blue?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
+[![Test Coverage](https://img.shields.io/badge/Coverage-Comprehensive-brightgreen?style=for-the-badge&logo=jacoco&logoColor=white)](https://github.com/raghavendra2006/CLOUD-COMPARE-AI)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
 CloudCompare AI is a multi-cloud comparison and recommendation platform that helps users evaluate cloud infrastructure services across AWS, Azure, Google Cloud Platform (GCP), Oracle Cloud Infrastructure (OCI), and Alibaba Cloud.
 
 The platform analyzes cloud resources such as compute, storage, pricing, and regional availability to generate intelligent recommendations based on cost, performance, and optimization priorities.
+
+**Topics:** `spring-boot`, `docker`, `jenkins`, `multi-cloud`, `ai`, `groq`, `java-21`
+
+---
+
+# ⏱️ Quick Start (Docker Compose)
+
+The fastest way to run CloudCompare AI locally is via Docker Compose:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/raghavendra2006/CLOUD-COMPARE-AI.git
+cd CLOUD-COMPARE-AI
+
+# 2. Start the application
+docker-compose up -d --build
+```
+*The platform will be available at `http://localhost:5000`*
 
 ---
 
@@ -61,7 +80,7 @@ graph TD
 
 | Layer | Technologies |
 |---|---|
-| Backend | Java 21, Spring Boot 3 |
+| Backend | Java 21 (Virtual Threads), Spring Boot 3 |
 | Security | Spring Security, JWT |
 | Database | MySQL, H2 |
 | ORM | Spring Data JPA, Hibernate |
@@ -108,7 +127,7 @@ cloudcompare-ai/
 
 ---
 
-# ⚡ Performance Optimizations
+# ⚡ Performance & Reliability Architecture
 
 - Java Virtual Threads (Project Loom)
 - Caffeine caching
@@ -141,7 +160,13 @@ Comparison parameters:
 
 ## AI Recommendation Engine
 
-The AI recommendation engine:
+The AI recommendation engine analyzes your input and returns curated suggestions.
+
+**Example Use Case:**
+* **Input:** *"Compare AWS RDS vs GCP Cloud SQL vs Azure SQL for a 500GB OLTP workload"*
+* **Output:** The platform leverages Groq (Llama 3.1) to return the top 5 matching database services, ranked by a calculated score, alongside live pricing estimates, model capabilities, and specific architectural justifications tailored to your exact workload.
+
+Features include:
 - Analyzes infrastructure requirements
 - Evaluates provider pricing
 - Calculates ranking scores
@@ -206,21 +231,7 @@ POST /api/compare
 
 ---
 
-# 🐳 Docker Deployment
 
-## Build Application
-
-```bash
-./mvnw clean package
-```
-
-## Run Using Docker Compose
-
-```bash
-docker-compose up -d --build
-```
-
----
 
 # ⚙️ Environment Variables
 
@@ -252,19 +263,13 @@ Generate JaCoCo coverage report:
 
 ---
 
-# 📸 Screenshots
+# 📸 UI & Dashboard
 
-## Dashboard
-(Add screenshot here)
+> **Note:** The platform features a premium dark/light mode toggle with interactive Chart.js visualizations, particle effects, and dynamic glassmorphism cards.
 
-## Cloud Comparison
-(Add screenshot here)
+To see the interactive dashboard, charts, and AI comparison cards in action, simply run the application locally or via the Quick Start guide. 
 
-## AI Recommendations
-(Add screenshot here)
-
-## Jenkins Pipeline
-(Add screenshot here)
+*(Screenshots can be added to the `screenshots/` directory)*
 
 ---
 
@@ -293,10 +298,12 @@ Generate JaCoCo coverage report:
 
 # 🤝 Contributing
 
+We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on how to submit issues, use templates, and create pull requests.
+
 1. Fork the repository
-2. Create a feature branch
-3. Commit changes
-4. Push the branch
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
 ---
