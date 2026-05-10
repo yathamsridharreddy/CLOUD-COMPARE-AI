@@ -32,6 +32,7 @@ import com.cloudcompare.ai.exception.BusinessException;
 public class GrokClientService {
 
     private static final Logger log = LoggerFactory.getLogger(GrokClientService.class);
+    private static final String PLACEHOLDER_API_KEY = "YOUR_GROQ_API_KEYS_HERE";
 
     @Value("${grok.api.keys}")
     private String apiKeysRaw;
@@ -41,7 +42,7 @@ public class GrokClientService {
         return Arrays.stream(apiKeysRaw.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Value("${grok.endpoint}")
@@ -67,7 +68,7 @@ public class GrokClientService {
 
     private String getNextApiKey() {
         List<String> keys = getApiKeys();
-        if (keys.isEmpty()) return "YOUR_GROQ_API_KEYS_HERE";
+        if (keys.isEmpty()) return PLACEHOLDER_API_KEY;
         return keys.get(Math.abs(keyIndex.getAndIncrement() % keys.size()));
     }
 
@@ -79,7 +80,7 @@ public class GrokClientService {
     @CircuitBreaker(name = "groqApi", fallbackMethod = "fetchComparisonFallback")
     public List<Map<String, Object>> fetchComparisonFromGrok(String category, String serviceType) throws IOException, InterruptedException {
         String apiKey = getNextApiKey();
-        if ("YOUR_GROQ_API_KEYS_HERE".equals(apiKey) || apiKey.isEmpty()) {
+        if (PLACEHOLDER_API_KEY.equals(apiKey) || apiKey.isEmpty()) {
             log.info("Using mock Groq response because API key is placeholder.");
             return mockDataService.getMockComparison(serviceType);
         }
@@ -103,7 +104,7 @@ public class GrokClientService {
     @CircuitBreaker(name = "groqApi", fallbackMethod = "fetchAiToolsFallback")
     public List<AiToolResult> fetchAiToolsComparisonFromGrok(String purpose) throws IOException, InterruptedException {
         String apiKey = getNextApiKey();
-        if ("YOUR_GROQ_API_KEYS_HERE".equals(apiKey) || apiKey.isEmpty()) {
+        if (PLACEHOLDER_API_KEY.equals(apiKey) || apiKey.isEmpty()) {
             log.info("Using purpose-aware mock data for AI tools. Purpose: {}", purpose);
             return mockDataService.getMockAiToolsForPurpose(purpose);
         }

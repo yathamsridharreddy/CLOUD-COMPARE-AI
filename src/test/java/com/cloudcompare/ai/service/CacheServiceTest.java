@@ -19,7 +19,7 @@ class CacheServiceTest {
         cacheService.set("key1", "value1");
         assertEquals("value1", cacheService.get("key1"));
 
-        cacheService.set("key2", "value2", 1000L);
+        cacheService.set("key2", "value2");
         assertEquals("value2", cacheService.get("key2"));
 
         cacheService.clear();

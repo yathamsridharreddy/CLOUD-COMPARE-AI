@@ -22,6 +22,9 @@ import java.util.stream.Collectors;
 @Service
 public class RankingService {
 
+    private static final String STORAGE_KEY = "storage";
+    private static final String REGION_KEY = "region";
+
     private static final double DEFAULT_PERF_WEIGHT = 0.40;
     private static final double DEFAULT_POP_WEIGHT = 0.25;
     private static final double DEFAULT_COST_WEIGHT = 0.35;
@@ -69,12 +72,12 @@ public class RankingService {
             sr.setCategory(category);
             sr.setCpu(toInt(g.get("cpu")));
             sr.setRam(toInt(g.get("ram")));
-            sr.setStorage(toInt(g.get("storage")));
+            sr.setStorage(toInt(g.get(STORAGE_KEY)));
             sr.setPricePerHour(toDouble(g.get("price_per_hour")));
             sr.setPricePerGb(toDouble(g.get("price_per_gb")));
             sr.setPerformanceScore(g.get("performance_score") != null ? toDouble(g.get("performance_score")) : 7);
             sr.setPopularityScore(g.get("popularity_score") != null ? toDouble(g.get("popularity_score")) : 7);
-            sr.setRegion(g.get("region") != null ? (String) g.get("region") : REGION_DEFAULTS.getOrDefault(provider, "global"));
+            sr.setRegion(g.get(REGION_KEY) != null ? (String) g.get(REGION_KEY) : REGION_DEFAULTS.getOrDefault(provider, "global"));
             sr.setDescription(g.get("description") != null ? (String) g.get("description") : serviceType);
             merged.put(provider, sr);
         }
@@ -156,7 +159,7 @@ public class RankingService {
         double[] costValues = new double[results.size()];
         for (int i = 0; i < results.size(); i++) {
             ServiceResult r = results.get(i);
-            if ("storage".equals(category)) {
+            if (STORAGE_KEY.equals(category)) {
                 costValues[i] = r.getPricePerGb() * (storage > 0 ? storage : 1000);
             } else {
                 costValues[i] = r.getPricePerHour() * (hours > 0 ? hours : 1);
@@ -166,8 +169,71 @@ public class RankingService {
         double costMax = Arrays.stream(costValues).max().orElse(0);
 
         List<ServiceResult> processed = new ArrayList<>();
-        final double pw = performanceWeight, ppw = popularityWeight, cw = costWeight;
+        double pw = performanceWeight;
+        double ppw = popularityWeight;
+        double cw = costWeight;
 
+        processed = processResults(results, category, hours, storage, pw, ppw, cw, costMin, costMax);
+
+        // Sort by score descending
+        processed.sort((a, b) -> Double.compare(b.getScore(), a.getScore()));
+
+        // Assign ranks
+        for (int i = 0; i < processed.size(); i++) {
+            processed.get(i).setRank(i + 1);
+        }
+
+        // Provider stats aggregation
+        Map<String, double[]> provMap = new LinkedHashMap<>();
+        // provMap values: [totalCost, totalPerf, count]
+        for (ServiceResult s : processed) {
+            provMap.computeIfAbsent(s.getPlatform(), k -> new double[3]);
+            double[] vals = provMap.get(s.getPlatform());
+            vals[0] += s.getCost();
+            vals[1] += s.getPerformanceScore();
+            vals[2] += 1;
+        }
+
+        List<ProviderStat> providerStats = provMap.entrySet().stream()
+                .map(e -> new ProviderStat(
+                        e.getKey(),
+                        round(e.getValue()[0] / e.getValue()[2], 2),
+                        round(e.getValue()[1] / e.getValue()[2], 1),
+                        (int) e.getValue()[2]
+                ))
+                .toList();
+
+        // Recommendation = top service with reason
+        ServiceResult recommendation = null;
+        if (!processed.isEmpty()) {
+            recommendation = cloneResult(processed.get(0));
+            recommendation.setReason(getRecommendationReason(recommendation, category));
+        }
+
+        // Build response
+        CompareResponse resp = new CompareResponse();
+        resp.setCategory(category);
+        resp.setFilters(Map.of(
+                "hours", hours,
+                REGION_KEY, region != null ? region : "all",
+                "cpu", 0,
+                "ram", 0,
+                STORAGE_KEY, storage > 0 ? storage : 0
+        ));
+        resp.setTotalResults(processed.size());
+        resp.setServices(processed);
+        resp.setProviderStats(providerStats);
+        resp.setRecommendation(recommendation);
+
+        return resp;
+    }
+
+    // ============================================================
+    // HELPERS
+    // ============================================================
+
+    private List<ServiceResult> processResults(List<ServiceResult> results, String category, int hours, int storage, double pw, double ppw, double cw, double costMin, double costMax) {
+        List<ServiceResult> processed = new ArrayList<>();
         for (int i = 0; i < results.size(); i++) {
             ServiceResult s = results.get(i);
             CostDetails cd = calculateCosts(s, category, hours, storage);
@@ -215,63 +281,8 @@ public class RankingService {
 
             processed.add(p);
         }
-
-        // Sort by score descending
-        processed.sort((a, b) -> Double.compare(b.getScore(), a.getScore()));
-
-        // Assign ranks
-        for (int i = 0; i < processed.size(); i++) {
-            processed.get(i).setRank(i + 1);
-        }
-
-        // Provider stats aggregation
-        Map<String, double[]> provMap = new LinkedHashMap<>();
-        // provMap values: [totalCost, totalPerf, count]
-        for (ServiceResult s : processed) {
-            provMap.computeIfAbsent(s.getPlatform(), k -> new double[3]);
-            double[] vals = provMap.get(s.getPlatform());
-            vals[0] += s.getCost();
-            vals[1] += s.getPerformanceScore();
-            vals[2] += 1;
-        }
-
-        List<ProviderStat> providerStats = provMap.entrySet().stream()
-                .map(e -> new ProviderStat(
-                        e.getKey(),
-                        round(e.getValue()[0] / e.getValue()[2], 2),
-                        round(e.getValue()[1] / e.getValue()[2], 1),
-                        (int) e.getValue()[2]
-                ))
-                .collect(Collectors.toList());
-
-        // Recommendation = top service with reason
-        ServiceResult recommendation = null;
-        if (!processed.isEmpty()) {
-            recommendation = cloneResult(processed.get(0));
-            recommendation.setReason(getRecommendationReason(recommendation, category));
-        }
-
-        // Build response
-        CompareResponse resp = new CompareResponse();
-        resp.setCategory(category);
-        resp.setFilters(Map.of(
-                "hours", hours,
-                "region", region != null ? region : "all",
-                "cpu", 0,
-                "ram", 0,
-                "storage", storage > 0 ? storage : 0
-        ));
-        resp.setTotalResults(processed.size());
-        resp.setServices(processed);
-        resp.setProviderStats(providerStats);
-        resp.setRecommendation(recommendation);
-
-        return resp;
+        return processed;
     }
-
-    // ============================================================
-    // HELPERS
-    // ============================================================
 
     private String getPerformanceLevel(double score) {
         if (score >= 9) return "High";
@@ -282,7 +293,7 @@ public class RankingService {
     private String getRecommendationReason(ServiceResult service, String category) {
         Map<String, String> reasons = Map.of(
                 "compute", "Best performance-to-cost ratio with " + service.getPerformanceLevel().toLowerCase() + " performance and excellent scalability",
-                "storage", "Optimal storage solution with " + service.getPerformanceLevel().toLowerCase() + " durability and competitive pricing",
+                STORAGE_KEY, "Optimal storage solution with " + service.getPerformanceLevel().toLowerCase() + " durability and competitive pricing",
                 "database", "Recommended for production workloads with excellent reliability and managed features",
                 "ai", "Top-rated AI service with " + service.getPerformanceLevel().toLowerCase() + " accuracy and strong ecosystem"
         );
@@ -305,10 +316,11 @@ public class RankingService {
     }
 
     private CostDetails calculateCosts(ServiceResult s, String category, int hours, int storage) {
-        double costVal, costPerHour;
-        if ("storage".equals(category)) {
+        double costVal;
+        double costPerHour;
+        if (STORAGE_KEY.equals(category)) {
             double msc = s.getPricePerGb() * (storage > 0 ? storage : 1000);
-            costPerHour = msc / (double) HOURS_IN_MONTH;
+            costPerHour = msc / HOURS_IN_MONTH;
             costVal = costPerHour * (hours > 0 ? hours : HOURS_IN_MONTH);
         } else {
             costPerHour = s.getPricePerHour();
@@ -318,7 +330,9 @@ public class RankingService {
     }
 
     private static class Weights {
-        double performance, popularity, cost;
+        double performance;
+        double popularity;
+        double cost;
         Weights(double perf, double pop, double cost) {
             this.performance = perf;
             this.popularity = pop;
@@ -327,7 +341,8 @@ public class RankingService {
     }
 
     private static class CostDetails {
-        double costVal, costPerHour;
+        double costVal;
+        double costPerHour;
         CostDetails(double costVal, double costPerHour) {
             this.costVal = costVal;
             this.costPerHour = costPerHour;
@@ -341,7 +356,7 @@ public class RankingService {
 
     private int toInt(Object val) {
         if (val == null) return 0;
-        if (val instanceof Number) return ((Number) val).intValue();
+        if (val instanceof Number number) return number.intValue();
         try {
             // Strip any non-digit characters except for initial parsing
             String cleaned = val.toString().replaceAll("[^0-9.-]", "");
@@ -354,7 +369,7 @@ public class RankingService {
 
     private double toDouble(Object val) {
         if (val == null) return 0;
-        if (val instanceof Number) return ((Number) val).doubleValue();
+        if (val instanceof Number number) return number.doubleValue();
         try {
             // Strip currency symbols, commas, etc.
             String cleaned = val.toString().replaceAll("[^0-9.-]", "");

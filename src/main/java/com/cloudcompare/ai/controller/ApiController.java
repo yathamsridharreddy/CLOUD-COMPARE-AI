@@ -62,7 +62,7 @@ public class ApiController {
     }
 
     @PostMapping("/compare")
-    public ResponseEntity<ApiResponse<?>> compare(@Valid @RequestBody CompareRequest req) {
+    public ResponseEntity<Object> compare(@Valid @RequestBody CompareRequest req) {
         String category = req.getCategory();
         String svcType = (req.getServiceType() != null && !"all".equals(req.getServiceType()))
                 ? req.getServiceType()
@@ -90,13 +90,17 @@ public class ApiController {
 
             return ResponseEntity.ok(ApiResponse.success(response));
 
-        } catch (RuntimeException | IOException | InterruptedException err) {
+        } catch (RuntimeException | IOException err) {
             log.error("Comparison failed: {}", err.getMessage());
             String errorMsg = err.getMessage();
             if (errorMsg != null && errorMsg.contains("YOUR_GROQ_API_KEYS_HERE")) {
                 errorMsg = "AI Engine Configuration Missing. Please set the GROK_API_KEYS environment variable to enable live analysis.";
             }
             return ResponseEntity.status(502).body(ApiResponse.error(errorMsg));
+        } catch (InterruptedException err) {
+            log.error("Comparison interrupted: {}", err.getMessage());
+            Thread.currentThread().interrupt();
+            return ResponseEntity.status(502).body(ApiResponse.error("Analysis interrupted"));
         }
     }
 
@@ -111,7 +115,7 @@ public class ApiController {
     }
 
     @PostMapping("/ai-compare")
-    public ResponseEntity<ApiResponse<?>> compareAiTools(@Valid @RequestBody AiCompareRequest req) {
+    public ResponseEntity<Object> compareAiTools(@Valid @RequestBody AiCompareRequest req) {
         String purpose = req.getPurpose();
         log.info("AI Analysis request for: {}", purpose);
 
@@ -135,9 +139,13 @@ public class ApiController {
                 "tools", grokResults
             )));
 
-        } catch (RuntimeException | IOException | InterruptedException err) {
+        } catch (RuntimeException | IOException err) {
             log.error("AI Tool Analysis failed: {}", err.getMessage());
             return ResponseEntity.status(502).body(ApiResponse.error("AI Analysis failed: " + err.getMessage()));
+        } catch (InterruptedException err) {
+            log.error("AI Tool Analysis interrupted: {}", err.getMessage());
+            Thread.currentThread().interrupt();
+            return ResponseEntity.status(502).body(ApiResponse.error("AI Analysis interrupted"));
         }
     }
 }

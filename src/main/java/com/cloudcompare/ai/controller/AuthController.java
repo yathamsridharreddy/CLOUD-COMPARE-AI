@@ -26,6 +26,7 @@ import java.util.Map;
 public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+    private static final String ERROR_KEY = "error";
 
     private final AuthService authService;
     private final JwtUtil jwtUtil;
@@ -43,14 +44,14 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signupRequest) {
+    public ResponseEntity<Object> registerUser(@Valid @RequestBody SignupRequest signupRequest) {
         logger.info("Processing signup for: {}", signupRequest.getEmail());
         authService.registerUser(signupRequest);
         return ResponseEntity.ok(Map.of("message", "User registration successful. Identity established."));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<Object> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             logger.info("Login request received for email: {}", loginRequest.getEmail());
 
@@ -58,13 +59,13 @@ public class AuthController {
             UserEntity user = userRepository.findByEmail(loginRequest.getEmail()).orElse(null);
             if (user == null) {
                 logger.warn("Login failed - user not found: {}", loginRequest.getEmail());
-                return ResponseEntity.status(401).body(Map.of("error", "Invalid email or password"));
+                return ResponseEntity.status(401).body(Map.of(ERROR_KEY, "Invalid email or password"));
             }
 
             // Verify password using BCrypt
             if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
                 logger.warn("Login failed - wrong password for: {}", loginRequest.getEmail());
-                return ResponseEntity.status(401).body(Map.of("error", "Invalid email or password"));
+                return ResponseEntity.status(401).body(Map.of(ERROR_KEY, "Invalid email or password"));
             }
 
             // Generate JWT token
@@ -82,7 +83,7 @@ public class AuthController {
             ));
         } catch (Exception e) {
             logger.error("Login error for {}: [{}] {}", loginRequest.getEmail(), e.getClass().getName(), e.getMessage());
-            return ResponseEntity.status(500).body(Map.of("error", "Login failed. Please try again."));
+            return ResponseEntity.status(500).body(Map.of(ERROR_KEY, "Login failed. Please try again."));
         }
     }
 }

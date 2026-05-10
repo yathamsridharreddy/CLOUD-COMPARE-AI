@@ -32,13 +32,7 @@ public class CacheService {
         cache.put(key, value);
     }
 
-    // Retained for backwards compatibility if needed, though Caffeine handles global TTL
-    public void set(String key, Object value, long ttlMs) {
-        // Caffeine's builder sets global TTL, which is sufficient and much faster
-        // than per-entry custom TTLs in a map. We ignore the custom TTL here
-        // to maintain maximum throughput.
-        cache.put(key, value);
-    }
+
 
     public void clear() {
         cache.invalidateAll();
