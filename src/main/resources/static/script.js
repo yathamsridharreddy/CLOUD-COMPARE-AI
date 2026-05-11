@@ -80,12 +80,11 @@ const platformIcons = {
 // If a mapping is missing, we simply don't render the <img>.
 // ============================================================
 const providerLogoUrlMap = {
-    // Use PNG variants for higher embed compatibility
-    'AWS': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_Web_Services_Logo.svg/512px-Amazon_Web_Services_Logo.svg.png',
-    'GCP': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Google_Cloud_Logo.svg/512px-Google_Cloud_Logo.svg.png',
-    'Azure': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Microsoft_Azure_Logo.svg/512px-Microsoft_Azure_Logo.svg.png',
-    'OCI': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Oracle_Cloud_Logo.svg/512px-Oracle_Cloud_Logo.svg.png',
-    'Alibaba': 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Alibaba-Cloud-Logo.svg/512px-Alibaba-Cloud-Logo.svg.png'
+    'AWS': 'assets/logos/aws.png',
+    'GCP': 'assets/logos/gcp.png',
+    'Azure': 'assets/logos/azure.png',
+    'OCI': 'assets/logos/oci.png',
+    'Alibaba': 'assets/logos/alibaba.png'
 };
 
 function getProviderLogoUrl(provider) {
