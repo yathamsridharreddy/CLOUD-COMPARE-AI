@@ -1,98 +1,182 @@
 import { Link } from 'react-router-dom'
-import Header from '../components/Layout/Header.jsx'
 
-const features = [
-  { icon: 'fa-robot', title: 'AI-Powered Analysis', desc: 'Groq LLM compares services across 5 cloud providers with intelligent scoring.' },
-  { icon: 'fa-bolt', title: 'Real-Time Pricing', desc: 'Live cost estimates for compute, storage, database, and AI services.' },
-  { icon: 'fa-shield-alt', title: 'Enterprise Grade', desc: 'Circuit breakers, caching, and virtual threads for production reliability.' },
-  { icon: 'fa-chart-bar', title: 'Visual Analytics', desc: 'Interactive charts for cost, performance, and popularity comparison.' },
-  { icon: 'fa-brain', title: 'NLP Queries', desc: 'Ask questions in plain English — no dropdowns needed.' },
-  { icon: 'fa-cloud', title: '5 Cloud Providers', desc: 'AWS, GCP, Azure, OCI, and Alibaba Cloud side-by-side.' }
+/* ─── Exact replica of the original index.html ─── */
+
+const stats = [
+  { icon: 'fa-th-large', color: 'icon-purple', value: '500+', label: 'AI Categories' },
+  { icon: 'fa-layer-group', color: 'icon-blue', value: '10K+', label: 'Tool Comparisons' },
+  { icon: 'fa-cloud', color: 'icon-green', value: '50+', label: 'Cloud Providers' },
+  { icon: 'fa-chart-line', color: 'icon-pink', value: 'Real-Time', label: 'Insights' }
 ]
 
-const providers = [
-  { name: 'AWS', color: '#FF9900', icon: 'fab fa-aws' },
-  { name: 'Google Cloud', color: '#4285F4', icon: 'fab fa-google' },
-  { name: 'Azure', color: '#0078D4', icon: 'fab fa-microsoft' },
-  { name: 'Oracle Cloud', color: '#F80000', icon: 'fas fa-database' },
-  { name: 'Alibaba Cloud', color: '#FF6A00', icon: 'fas fa-cloud' }
-]
+const iconColors = {
+  'icon-purple': { bg: 'rgba(138,43,226,0.1)', color: '#d8b4fe', border: 'rgba(138,43,226,0.3)' },
+  'icon-blue': { bg: 'rgba(0,210,255,0.1)', color: '#93c5fd', border: 'rgba(0,210,255,0.3)' },
+  'icon-green': { bg: 'rgba(16,185,129,0.1)', color: '#6ee7b7', border: 'rgba(16,185,129,0.3)' },
+  'icon-pink': { bg: 'rgba(236,72,153,0.1)', color: '#f9a8d4', border: 'rgba(236,72,153,0.3)' }
+}
 
 export default function LandingPage() {
   return (
-    <div className="relative z-10 min-h-screen">
-      <Header />
+    <>
+      <div className="stars" />
 
-      {/* Hero Section */}
-      <section className="flex flex-col items-center justify-center text-center px-6 pt-20 pb-16">
-        <div className="animate-fade-in-up">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-6 rounded-full bg-gold-primary/10 border border-gold-primary/20">
-            <i className="fas fa-sparkles text-gold-accent text-xs" />
-            <span className="text-xs font-medium text-gold-accent">Powered by Java 21 + Groq AI</span>
+      {/* ─── Navbar ─── */}
+      <nav style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '1.5rem 4rem', position: 'relative', zIndex: 10
+      }}>
+        <Link to="/" style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          textDecoration: 'none', color: 'white', fontWeight: 700, fontSize: '1.2rem'
+        }}>
+          <div style={{
+            width: 32, height: 32, background: 'linear-gradient(135deg, #00d2ff, #8a2be2)',
+            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <i className="fas fa-cloud" style={{ fontSize: '0.9rem', color: 'white' }} />
           </div>
+          <span>CloudCompare AI</span>
+        </Link>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <Link to="/login" className="btn btn-outline">Login</Link>
+          <Link to="/signup" className="btn btn-primary">Signup</Link>
+        </div>
+      </nav>
 
-          <h1 className="text-5xl md:text-6xl font-extrabold mb-4 leading-tight">
-            <span className="bg-gradient-to-r from-gold-primary via-gold-accent to-gold-primary bg-clip-text text-transparent">
-              CloudCompare AI
-            </span>
+      {/* ─── Hero Section ─── */}
+      <main style={{
+        display: 'flex', justifyContent: 'space-between', padding: '4rem 4rem',
+        position: 'relative', minHeight: 'calc(100vh - 200px)'
+      }}>
+        {/* Left Column */}
+        <div style={{
+          flex: 1, maxWidth: 600, zIndex: 10,
+          display: 'flex', flexDirection: 'column', justifyContent: 'center'
+        }}>
+          <div style={{
+            color: '#8a2be2', fontSize: '0.75rem', fontWeight: 700,
+            letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '1.5rem'
+          }}>
+            Smart Cloud & AI Discovery Platform
+          </div>
+          <h1 style={{
+            fontSize: '4.5rem', fontWeight: 800, lineHeight: 1.1,
+            marginBottom: '1.5rem', letterSpacing: '-0.02em'
+          }}>
+            Compare.<br />
+            Analyze.<br />
+            <span className="gradient-text">Choose Better.</span>
           </h1>
-          <p className="text-lg text-text-secondary max-w-2xl mx-auto mb-8 leading-relaxed">
-            The intelligent multi-cloud service recommendation engine. Compare AWS, GCP, Azure, OCI, and Alibaba Cloud with AI-powered analysis in seconds.
+          <p style={{
+            color: '#94a3b8', fontSize: '1.1rem', lineHeight: 1.6,
+            marginBottom: '2.5rem', maxWidth: 500
+          }}>
+            Discover and compare leading AI tools, cloud platforms, and modern software solutions in one intelligent platform.
           </p>
-
-          <div className="flex flex-col sm:flex-row items-center gap-4 justify-center">
-            <Link to="/dashboard" className="btn-gold flex items-center gap-2 no-underline text-sm">
-              <i className="fas fa-rocket" /> Launch Dashboard
-            </Link>
-            <Link
-              to="/signup"
-              className="flex items-center gap-2 px-6 py-3 rounded-xl border border-space-border text-text-secondary
-                         hover:border-gold-primary/40 hover:text-text-primary transition-all no-underline text-sm"
-            >
-              <i className="fas fa-user-plus" /> Create Account
-            </Link>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <Link to="/login" className="btn btn-primary">Start Comparing →</Link>
+            <Link to="/dashboard" className="btn btn-hero-outline">Explore AI Tools</Link>
           </div>
         </div>
-      </section>
 
-      {/* Provider Logos */}
-      <section className="flex items-center justify-center gap-8 flex-wrap px-6 py-8 mb-12">
-        {providers.map((p) => (
-          <div key={p.name} className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
-            <i className={`${p.icon} text-xl`} style={{ color: p.color }} />
-            <span className="text-sm font-medium text-text-secondary">{p.name}</span>
+        {/* Right Column — Orbital Graphics */}
+        <div style={{
+          flex: 1, position: 'relative', display: 'flex',
+          justifyContent: 'center', alignItems: 'center'
+        }}>
+          {/* Top Badge */}
+          <div style={{
+            position: 'absolute', top: -20, right: 0,
+            background: 'rgba(10,10,25,0.6)', border: '1px solid rgba(138,43,226,0.3)',
+            padding: '0.5rem 1rem', borderRadius: 9999, fontSize: '0.8rem',
+            display: 'flex', alignItems: 'center', gap: 6,
+            backdropFilter: 'blur(10px)', zIndex: 10
+          }}>
+            <i className="fas fa-star" style={{ color: '#a5f3fc', fontSize: '0.7rem' }} />
+            5000+ AI & Cloud Services Compared
           </div>
-        ))}
-      </section>
 
-      {/* Features Grid */}
-      <section className="max-w-6xl mx-auto px-6 pb-20">
-        <h2 className="text-2xl font-bold text-center text-text-primary mb-10">
-          <i className="fas fa-gem mr-2 text-gold-primary" />Platform Capabilities
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {features.map((f, i) => (
-            <div
-              key={f.title}
-              className="glass-card p-6 animate-fade-in-up"
-              style={{ animationDelay: `${i * 100}ms` }}
-            >
-              <div className="w-12 h-12 rounded-xl bg-gold-primary/15 flex items-center justify-center mb-4">
-                <i className={`fas ${f.icon} text-gold-accent text-lg`} />
+          {/* Orbital Ring */}
+          <div style={{
+            position: 'absolute', width: 800, height: 800, borderRadius: '50%',
+            border: '2px solid rgba(0,210,255,0.2)',
+            boxShadow: 'inset 0 0 50px rgba(138,43,226,0.2), 0 0 100px rgba(0,210,255,0.15)',
+            right: -200, top: '50%', transform: 'translateY(-50%)',
+            borderTopColor: 'rgba(138,43,226,0.6)', borderRightColor: 'rgba(0,210,255,0.6)',
+            zIndex: 1
+          }} />
+
+          {/* Floating Logos */}
+          <div className="floating-logo" style={{ width: 90, height: 60, top: '10%', left: '10%', animationDelay: '0s' }}>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS" style={{ filter: 'drop-shadow(0 0 10px rgba(255,153,0,0.4))', padding: 12 }} />
+          </div>
+          <div className="floating-logo" style={{ width: 80, height: 80, top: '20%', right: '10%', animationDelay: '1s' }}>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/a/a8/Microsoft_Azure_Logo.svg" alt="Azure" style={{ padding: 16 }} />
+          </div>
+          <div className="floating-logo" style={{
+            width: 90, height: 90, top: '35%', left: '35%', animationDelay: '2s',
+            borderColor: 'rgba(0,210,255,0.4)', boxShadow: '0 0 30px rgba(0,210,255,0.2)'
+          }}>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Google_Cloud_logo.svg" alt="GCP" style={{ padding: 18 }} />
+          </div>
+          <div className="floating-logo" style={{ width: 85, height: 60, bottom: '35%', right: '-5%', animationDelay: '3s' }}>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Oracle_Logo.svg" alt="OCI" />
+          </div>
+          <div className="floating-logo" style={{ width: 100, height: 60, top: '50%', right: '25%', animationDelay: '1.5s' }}>
+            <span style={{ color: '#ff6a00', fontWeight: 800, fontSize: '1.1rem', textAlign: 'center' }}>
+              Alibaba<br />Cloud
+            </span>
+          </div>
+          <div className="floating-logo" style={{
+            width: 80, height: 80, bottom: '25%', left: 0, animationDelay: '3s',
+            flexDirection: 'column', gap: 4
+          }}>
+            <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>AI</span>
+            <small style={{ fontSize: '0.45rem', letterSpacing: 1, color: '#a1a1aa' }}>ANTHROPIC</small>
+          </div>
+          <div className="floating-logo" style={{
+            width: 80, height: 40, bottom: '15%', left: '30%', animationDelay: '1.5s',
+            fontSize: '1rem', fontWeight: 600, color: '#4facfe'
+          }}>
+            Gemini
+          </div>
+          <div className="floating-logo" style={{
+            width: 80, height: 60, bottom: '20%', right: '25%', animationDelay: '2.5s',
+            fontSize: '1.2rem', fontWeight: 'bold', color: '#f97316'
+          }}>
+            groq
+          </div>
+        </div>
+      </main>
+
+      {/* ─── Stats Bar ─── */}
+      <div style={{ padding: '0 4rem 2rem', position: 'relative', zIndex: 10 }}>
+        <div style={{
+          background: 'rgba(13,17,30,0.6)', border: '1px solid rgba(138,43,226,0.2)',
+          backdropFilter: 'blur(20px)', borderRadius: 20, padding: '2rem',
+          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '2rem'
+        }}>
+          {stats.map((s) => {
+            const c = iconColors[s.color]
+            return (
+              <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1.2rem', background: c.bg, color: c.color, border: `1px solid ${c.border}`
+                }}>
+                  <i className={`fas ${s.icon}`} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.8rem', fontWeight: 700, lineHeight: 1.1, marginBottom: 2 }}>{s.value}</h3>
+                  <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{s.label}</p>
+                </div>
               </div>
-              <h3 className="font-bold text-text-primary mb-2">{f.title}</h3>
-              <p className="text-sm text-text-secondary leading-relaxed">{f.desc}</p>
-            </div>
-          ))}
+            )
+          })}
         </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="text-center py-8 border-t border-space-border">
-        <p className="text-xs text-text-muted">
-          © 2024 CloudCompare AI — Built with Spring Boot 3, Java 21, React & Tailwind CSS
-        </p>
-      </footer>
-    </div>
+      </div>
+    </>
   )
 }
