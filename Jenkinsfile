@@ -94,9 +94,9 @@ pipeline {
                     // Copy docker-compose.yml to EC2 Server
                     bat "scp -o StrictHostKeyChecking=no -i \"%SSH_KEY%\" docker-compose.yml ${EC2_USER}@${EC2_IP}:~/docker-compose.yml"
                     
-                    // Run deployment via SSH and auto-install docker-compose if missing
+                    // Install/upgrade docker-compose and deploy
                     bat """
-                        ssh -o StrictHostKeyChecking=no -i "%SSH_KEY%" ${EC2_USER}@${EC2_IP} "if [ ! -f /usr/local/bin/docker-compose ]; then sudo curl -sSL 'https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-Linux-x86_64' -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose; fi && DOCKER_IMAGE=${DOCKER_IMAGE}:latest sudo -E /usr/local/bin/docker-compose down && DOCKER_IMAGE=${DOCKER_IMAGE}:latest sudo -E /usr/local/bin/docker-compose pull && DOCKER_IMAGE=${DOCKER_IMAGE}:latest sudo -E /usr/local/bin/docker-compose up -d"
+                        ssh -o StrictHostKeyChecking=no -i "%SSH_KEY%" ${EC2_USER}@${EC2_IP} "sudo curl -sSL 'https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64' -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose && sudo DOCKER_IMAGE=${DOCKER_IMAGE}:latest /usr/local/bin/docker-compose down && sudo DOCKER_IMAGE=${DOCKER_IMAGE}:latest /usr/local/bin/docker-compose pull && sudo DOCKER_IMAGE=${DOCKER_IMAGE}:latest /usr/local/bin/docker-compose up -d"
                     """
                 }
             }
