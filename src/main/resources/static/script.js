@@ -1080,7 +1080,7 @@ function displayTrendChart(services) {
                     intersect: false,
                     callbacks: {
                         title: function (context) {
-                            return '📊 ' + context[0].label + ' 2024';
+                            return '📊 ' + context[0].label + ' 2026';
                         },
                         label: function (context) {
                             return context.dataset.label + ': $' + context.raw.toFixed(2);
