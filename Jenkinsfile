@@ -73,11 +73,13 @@ pipeline {
 
         stage('Deploy Locally') {
             steps {
-                echo 'Deploying container to local Docker Desktop...'
-                // Stop and remove existing container if it exists
-                bat "docker rm -f cloud-compare-app || exit 0"
-                // Start the new container with correct port and DB host
-                bat "docker run -d -p 5000:5000 --name cloud-compare-app -e DB_HOST=host.docker.internal ${DOCKER_IMAGE}:latest"
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    echo 'Deploying container to local Docker Desktop...'
+                    // Stop and remove existing container if it exists
+                    bat "docker rm -f cloud-compare-app || exit 0"
+                    // Start the new container
+                    bat "docker run -d -p 5000:5000 --name cloud-compare-app -e DB_HOST=host.docker.internal ${DOCKER_IMAGE}:latest"
+                }
             }
         }
 
