@@ -3,8 +3,6 @@ import { useNavigate, Link } from 'react-router-dom'
 import { authApi } from '../../api/client'
 import { useAuth } from '../../hooks/useAuth'
 
-/* ─── Exact replica of login.html ─── */
-
 export default function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -73,16 +71,27 @@ export default function LoginForm() {
     setLoading(true)
 
     try {
-      const res = await authApi.login(email, password)
+      const res  = await authApi.login(email, password)
       const data = res.data
-      if (data?.data?.token || data?.token) {
-        login(data?.data?.token || data.token)
+
+      // BUG 3 FIX: backend returns token at data.data.token OR data.token
+      const token    = data?.data?.token    || data?.token
+      const userObj  = data?.data?.user     || data?.user || { email }
+
+      if (token) {
+        // Pass both token and user object so useAuth stores them correctly
+        login(token, { email: userObj.email || email, name: userObj.username || email.split('@')[0] })
         navigate('/dashboard')
       } else {
         setError('Invalid email or password')
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Unable to connect to the server.')
+      setError(
+        err.response?.data?.data?.message ||
+        err.response?.data?.message       ||
+        err.response?.data?.error         ||
+        'Unable to connect to the server.'
+      )
     } finally {
       setLoading(false)
     }
@@ -139,6 +148,7 @@ export default function LoginForm() {
               padding: '1rem', borderRadius: 12, marginBottom: '2rem', fontSize: '0.95rem',
               background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5'
             }}>
+              <i className="fas fa-exclamation-circle" style={{ marginRight: 8 }} />
               {error}
             </div>
           )}
@@ -151,6 +161,7 @@ export default function LoginForm() {
                 fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1
               }}>Email Address</label>
               <input
+                id="login-email"
                 type="email"
                 className="form-control"
                 value={email}
@@ -177,6 +188,7 @@ export default function LoginForm() {
               }}>Password</label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   className="form-control"
                   style={{ paddingRight: '3.2rem' }}
@@ -196,7 +208,7 @@ export default function LoginForm() {
               </div>
             </div>
 
-            <button type="submit" className="btn-auth" disabled={loading} style={{ marginTop: '1rem' }}>
+            <button id="login-submit" type="submit" className="btn-auth" disabled={loading} style={{ marginTop: '1rem' }}>
               {loading ? (
                 <><i className="fas fa-spinner fa-spin" /> Signing in...</>
               ) : (

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { chatApi } from '../../api/client.js'
 
 const starterPrompts = {
@@ -29,8 +29,14 @@ export default function ChatbotPanel({
   ])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const messagesEndRef = useRef(null)
 
   const prompts = useMemo(() => starterPrompts[mode], [mode])
+
+  // Auto-scroll to bottom when new messages appear
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
 
   const sendQuestion = async (text = question) => {
     const cleanQuestion = text.trim()
@@ -46,7 +52,15 @@ export default function ChatbotPanel({
         ? await chatApi.cloud(cleanQuestion, cloudContext)
         : await chatApi.aiTools(cleanQuestion, aiToolsContext)
 
-      const reply = res.data?.data?.reply || res.data?.reply || 'I could not generate a response for that question.'
+      // BUG 6 FIX: backend returns { response: "..." } not { reply: "..." }
+      // Support both wrapped (data.data.response) and flat (data.response) shapes
+      const reply =
+        res.data?.data?.response ||
+        res.data?.data?.reply    ||
+        res.data?.response       ||
+        res.data?.reply          ||
+        'I could not generate a response for that question.'
+
       setMessages((current) => [...current, { role: 'assistant', text: reply }])
     } catch (err) {
       const message = err.response?.status === 403
@@ -116,6 +130,7 @@ export default function ChatbotPanel({
                 </div>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
 
           <form

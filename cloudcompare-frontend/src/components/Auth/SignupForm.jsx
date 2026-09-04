@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { authApi } from '../../api/client'
-
-/* ─── Exact replica of signup.html ─── */
+import { useAuth } from '../../hooks/useAuth'
 
 export default function SignupForm() {
   const [username, setUsername] = useState('')
@@ -13,6 +12,7 @@ export default function SignupForm() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const { login } = useAuth()   // BUG 4 FIX: import login so we can call it after signup
   const navigate = useNavigate()
   const cardRef = useRef(null)
   const lightRef = useRef(null)
@@ -63,10 +63,28 @@ export default function SignupForm() {
 
     setLoading(true)
     try {
-      await authApi.signup(username, email, password)
-      navigate('/login')
+      const res  = await authApi.signup(username, email, password)
+      const data = res.data
+
+      // BUG 4 FIX: extract token and immediately log the user in,
+      // then redirect to /dashboard (not /login)
+      const token   = data?.data?.token   || data?.token
+      const userObj = data?.data?.user    || data?.user || { email, username }
+
+      if (token) {
+        login(token, { email: userObj.email || email, name: userObj.username || username })
+        navigate('/dashboard')
+      } else {
+        // Fallback: still redirect to login if no token
+        navigate('/login')
+      }
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Signup failed. Please try again.')
+      setError(
+        err.response?.data?.data?.message ||
+        err.response?.data?.message       ||
+        err.response?.data?.error         ||
+        'Signup failed. Please try again.'
+      )
     } finally {
       setLoading(false)
     }
@@ -119,14 +137,15 @@ export default function SignupForm() {
               padding: '1rem', borderRadius: 12, marginBottom: '1.5rem', fontSize: '0.95rem',
               background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5'
             }}>
+              <i className="fas fa-exclamation-circle" style={{ marginRight: 8 }} />
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit}>
             {[
-              { label: 'Username', type: 'text', value: username, set: setUsername, placeholder: 'your-username' },
-              { label: 'Email Address', type: 'email', value: email, set: setEmail, placeholder: 'you@example.com' }
+              { id: 'signup-username', label: 'Username',      type: 'text',  value: username, set: setUsername, placeholder: 'your-username' },
+              { id: 'signup-email',    label: 'Email Address', type: 'email', value: email,    set: setEmail,    placeholder: 'you@example.com' }
             ].map((f) => (
               <div key={f.label} style={{ marginBottom: '1.2rem' }}>
                 <label style={{
@@ -134,6 +153,7 @@ export default function SignupForm() {
                   fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1
                 }}>{f.label}</label>
                 <input
+                  id={f.id}
                   type={f.type} className="form-control" value={f.value}
                   onChange={(e) => f.set(e.target.value)} placeholder={f.placeholder} required
                 />
@@ -146,7 +166,7 @@ export default function SignupForm() {
                 fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1
               }}>Password</label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <input type={showPassword ? 'text' : 'password'} className="form-control" style={{ paddingRight: '3.2rem' }}
+                <input id="signup-password" type={showPassword ? 'text' : 'password'} className="form-control" style={{ paddingRight: '3.2rem' }}
                   value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
                 <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} onClick={() => setShowPassword(!showPassword)}
                   style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#64748b', fontSize: '1.1rem', zIndex: 2 }} />
@@ -159,14 +179,14 @@ export default function SignupForm() {
                 fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1
               }}>Confirm Password</label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <input type={showConfirm ? 'text' : 'password'} className="form-control" style={{ paddingRight: '3.2rem' }}
+                <input id="signup-confirm" type={showConfirm ? 'text' : 'password'} className="form-control" style={{ paddingRight: '3.2rem' }}
                   value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" required />
                 <i className={`fas ${showConfirm ? 'fa-eye-slash' : 'fa-eye'}`} onClick={() => setShowConfirm(!showConfirm)}
                   style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#64748b', fontSize: '1.1rem', zIndex: 2 }} />
               </div>
             </div>
 
-            <button type="submit" className="btn-auth" disabled={loading}>
+            <button id="signup-submit" type="submit" className="btn-auth" disabled={loading}>
               {loading ? <><i className="fas fa-spinner fa-spin" /> Creating...</> : <><i className="fas fa-rocket" /> Create Account</>}
             </button>
           </form>
