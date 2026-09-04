@@ -55,13 +55,20 @@ export default function DashboardPage() {
       } catch {
         res = await aiApi.compareTools(query)
       }
-      setAiResults(res.data?.data || null)
+
+      // BUG 5 FIX: backend wraps in { data: { tools: [...], ... } }
+      // Extract the inner data payload
+      const payload = res.data?.data || res.data || null
+      setAiResults(payload)
     } catch (err) {
       setAiError(err.response?.data?.message || 'AI analysis failed')
     } finally {
       setAiLoading(false)
     }
   }
+
+  // Derive service list for chatbot context (handles both {services:[]} and array)
+  const servicesList = cloudResults?.services || (Array.isArray(cloudResults) ? cloudResults : [])
 
   return (
     <div className="relative z-10 min-h-screen">
@@ -101,7 +108,7 @@ export default function DashboardPage() {
             serviceType,
             priority,
             resources,
-            services: cloudResults?.services || cloudResults || []
+            services: servicesList
           }}
           aiToolsContext={{
             query: lastQuery,
@@ -170,15 +177,23 @@ export default function DashboardPage() {
             {/* Cloud Results */}
             {cloudResults && (
               <div className="animate-fade-in-up">
+                {/* Recommendation banner */}
+                {cloudResults.recommendation && (
+                  <div className="mb-4 p-4 rounded-xl bg-gold-primary/10 border border-gold-primary/30 text-gold-accent text-sm">
+                    <i className="fas fa-star mr-2 text-gold-primary" />
+                    {cloudResults.recommendation}
+                  </div>
+                )}
+
                 {/* Provider Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
-                  {(cloudResults.services || cloudResults).map((svc, i) => (
+                  {servicesList.map((svc, i) => (
                     <ProviderCard key={svc.provider || i} service={svc} rank={i + 1} />
                   ))}
                 </div>
 
                 {/* Charts */}
-                <ComparisonCharts services={cloudResults.services || cloudResults} />
+                <ComparisonCharts services={servicesList} />
               </div>
             )}
           </div>
@@ -206,7 +221,7 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* AI Results */}
+            {/* AI Results — BUG 5 FIX: aiResults now has correct shape { tools, totalResults, ... } */}
             {aiResults && <AiResultsGrid results={aiResults} query={lastQuery} />}
           </div>
         )}

@@ -18,33 +18,34 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// ─── Auth ──────────────────────────────────────────────────────────────────
 export const authApi = {
-  login: (email, password) => api.post('/auth/login', { email, password }),
-  signup: (name, email, password) => api.post('/auth/signup', { name, email, password })
+  login:  (email, password)         => api.post('/auth/login',  { email, password }),
+  signup: (name, email, password)   => api.post('/auth/signup', { name, email, password })
 }
 
-// ─── Cloud Compare ─────────────────────────────────
+// ─── Cloud Compare ─────────────────────────────────────────────────────────
 export const cloudApi = {
-  compare: (params) => api.post('/compare', params),
-  getServiceTypes: (category) => api.get(`/service-types/${category}`),
-  getRegions: () => api.get('/regions')
+  compare:        (params)   => api.post('/compare', params),
+  getServiceTypes:(category) => api.get(`/service-types/${category}`),
+  getRegions:     ()         => api.get('/regions')
 }
 
-// ─── AI Tools ──────────────────────────────────────
+// ─── AI Tools ──────────────────────────────────────────────────────────────
 export const aiApi = {
-  compareTools: (purpose) => api.post('/ai-compare', { purpose }),
-  nlpCompare: (query) => api.post('/nlp-compare', { query })
+  compareTools: (purpose) => api.post('/ai-compare',   { purpose }),
+  nlpCompare:   (query)   => api.post('/nlp-compare',  { query })
 }
 
-// ─── Chatbot Assistants ───────────────────────────
+// ─── Chatbot Assistants ────────────────────────────────────────────────────
 export const chatApi = {
-  cloud: (question, cloudContext = {}) => api.post('/chat/cloud', { question, cloudContext }),
+  cloud:   (question, cloudContext = {})    => api.post('/chat/cloud',    { question, cloudContext }),
   aiTools: (question, aiToolsContext = {}) => api.post('/chat/ai-tools', { question, aiToolsContext })
 }
 
-// ─── Health ────────────────────────────────────────
+// ─── Health ────────────────────────────────────────────────────────────────
 export const healthApi = {
-  check: () => api.get('/test')
+  check: () => api.get('/health')   // BUG 9 FIX: was '/test', correct route is '/health'
 }
 
 export default api

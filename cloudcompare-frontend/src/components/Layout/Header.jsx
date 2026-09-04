@@ -34,7 +34,7 @@ export default function Header() {
           <>
             <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
               <i className="fas fa-user-circle" style={{ marginRight: 4 }} />
-              {user?.email}
+              {user?.name || user?.email}
             </span>
             <button onClick={handleLogout} style={{
               padding: '0.5rem 1rem', borderRadius: 10, cursor: 'pointer',
