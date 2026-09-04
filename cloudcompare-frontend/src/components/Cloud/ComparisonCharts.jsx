@@ -59,29 +59,23 @@ export default function ComparisonCharts({ services }) {
   const popData = buildChart(services, 'provider', 'popularity_score', 'Popularity')
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-      <div className="chart-box">
-        <h3 className="text-sm font-semibold text-text-secondary mb-3">
-          <i className="fas fa-dollar-sign mr-2 text-gold-primary" />Cost Comparison
-        </h3>
+    <div className="charts-row" style={{ marginTop: '2rem' }}>
+      <div className="chart-container">
+        <h3><i className="fas fa-dollar-sign" /> Cost Comparison</h3>
         <div className="h-52">
           <Bar data={costData} options={chartOptions} />
         </div>
       </div>
 
-      <div className="chart-box">
-        <h3 className="text-sm font-semibold text-text-secondary mb-3">
-          <i className="fas fa-tachometer-alt mr-2 text-accent-green" />Performance
-        </h3>
+      <div className="chart-container">
+        <h3><i className="fas fa-tachometer-alt" /> Performance Score</h3>
         <div className="h-52">
           <Bar data={perfData} options={chartOptions} />
         </div>
       </div>
 
-      <div className="chart-box">
-        <h3 className="text-sm font-semibold text-text-secondary mb-3">
-          <i className="fas fa-fire mr-2 text-accent-blue" />Popularity
-        </h3>
+      <div className="chart-container">
+        <h3><i className="fas fa-fire" /> Popularity</h3>
         <div className="h-52">
           <Bar data={popData} options={chartOptions} />
         </div>
