@@ -77,7 +77,7 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {/* View Toggle */}
         <div className="flex justify-center mb-8">
-          <div className="inline-flex rounded-xl border border-space-border overflow-hidden">
+          <div className="inline-flex rounded-xl border border-space-border overflow-hidden shadow-lg shadow-black/30">
             <button
               onClick={() => setActiveView('cloud')}
               className={`px-6 py-2.5 text-sm font-medium transition-all cursor-pointer
@@ -130,7 +130,7 @@ export default function DashboardPage() {
               <CategorySelector selected={category} onChange={(c) => { setCategory(c); setServiceType('all') }} />
               <ResourceInputs values={resources} onChange={setResources} />
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                 <ServiceTypeSelect category={category} value={serviceType} onChange={setServiceType} />
 
                 <div>
