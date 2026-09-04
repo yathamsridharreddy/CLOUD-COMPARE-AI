@@ -1,0 +1,16 @@
+# CloudCompare AI — Render Blueprint
+services:
+  - type: web
+    name: cloudcompare-ai-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile.render
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /api/test
+    envVars:
+      - key: JWT_SECRET
+        sync: false
+      - key: GROK_API_KEYS
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://cloudcompare-ai.vercel.app
