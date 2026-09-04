@@ -30,27 +30,18 @@ services:
       - key: CORS_ALLOWED_ORIGINS
         value: https://cloud-compare-ai-flax.vercel.app
       # ── Persistent database (managed Postgres) ─────────────────────────────
-      # Render's free Postgres injects DATABASE_URL (postgres://user:pass@host/db).
-      - key: SPRING_DATASOURCE_URL
+      # Render injects DATABASE_URL as postgresql://user:pass@host:port/db.
+      # RenderDatabaseConfig converts it to a JDBC URL (jdbc:postgresql://...)
+      # with separate user/password, which is what HikariCP requires.
+      - key: DATABASE_URL
         fromDatabase:
           name: cloudcompare-db
           property: connectionString
-      - key: SPRING_DATASOURCE_USERNAME
-        fromDatabase:
-          name: cloudcompare-db
-          property: user
-      - key: SPRING_DATASOURCE_PASSWORD
-        fromDatabase:
-          name: cloudcompare-db
-          property: password
-      - key: SPRING_DATASOURCE_DRIVER_CLASS_NAME
-        value: org.postgresql.Driver
       - key: SPRING_JPA_DATABASE_PLATFORM
         value: org.hibernate.dialect.PostgreSQLDialect
-      - key: SPRING_DATASOURCE_HIKARI_MAX_POOL_SIZE
-        value: "5"
-      - key: SPRING_DATASOURCE_HIKARI_MIN_IDLE
-        value: "1"
+      # update (not create) so registered users survive redeploys.
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: "update"
 
 databases:
   - name: cloudcompare-db
