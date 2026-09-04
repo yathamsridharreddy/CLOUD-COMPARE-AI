@@ -1,0 +1,13 @@
+name: Render keep-alive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # every 10 minutes
+  workflow_dispatch: {}      # allows manual "Run workflow"
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render /api/test
+        run: curl -fsS -o /dev/null -w '%{http_code}\n' "https://cloudcompare-ai-api.onrender.com/api/test" || true
