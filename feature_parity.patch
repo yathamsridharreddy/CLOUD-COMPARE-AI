@@ -1,0 +1,1287 @@
+diff --git a/cloudcompare-frontend/index.html b/cloudcompare-frontend/index.html
+index 34d4619..bd57a95 100644
+--- a/cloudcompare-frontend/index.html
++++ b/cloudcompare-frontend/index.html
+@@ -9,6 +9,7 @@
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
++    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+   </head>
+   <body>
+     <div id="root"></div>
+diff --git a/cloudcompare-frontend/src/components/AI/AiPurposeInput.jsx b/cloudcompare-frontend/src/components/AI/AiPurposeInput.jsx
+new file mode 100644
+index 0000000..e0c2806
+--- /dev/null
++++ b/cloudcompare-frontend/src/components/AI/AiPurposeInput.jsx
+@@ -0,0 +1,61 @@
++import { useState } from 'react'
++
++const PURPOSES = [
++  'Coding and Software Development',
++  'Content Writing and Copywriting',
++  'Data Analysis and Spreadsheets',
++  'Image Generation and Design',
++  'Video Generation and Editing',
++  'Presentation and Slide Deck Creation',
++  'Music and Audio Generation',
++  'General Research and Chat'
++]
++
++export default function AiPurposeInput({ onSubmit, loading }) {
++  const [purpose, setPurpose] = useState(PURPOSES[0])
++  const [queryText, setQueryText] = useState('')
++
++  const handleSubmit = (e) => {
++    e.preventDefault()
++    if (loading) return
++    onSubmit({ purpose, queryText: queryText.trim() })
++  }
++
++  return (
++    <div className="input-grid">
++      <div className="input-row">
++        <div className="input-group full-width">
++          <label><i className="fas fa-bullseye" /> Select Purpose</label>
++          <select
++            value={purpose}
++            onChange={(e) => setPurpose(e.target.value)}
++            style={{ padding: '1rem', fontSize: '1.1rem', width: '100%', borderRadius: '12px', background: 'rgba(15,23,42,0.5)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}
++          >
++            {PURPOSES.map((p) => <option key={p} value={p}>{p}</option>)}
++          </select>
++        </div>
++      </div>
++
++      <div className="input-row">
++        <div className="input-group" style={{ marginTop: '1rem' }}>
++          <label><i className="fas fa-pen-nib" /> Or enter free-text (optional)</label>
++          <input
++            type="text"
++            value={queryText}
++            onChange={(e) => setQueryText(e.target.value)}
++            placeholder="e.g., Recommend best tools for building a coding assistant"
++          />
++          <small style={{ display: 'block', color: '#94a3b8', marginTop: '0.35rem' }}>
++            If provided, free-text overrides the dropdown purpose.
++          </small>
++        </div>
++
++        <div className="input-group action-group" style={{ marginTop: '1rem' }}>
++          <button className="compare-btn" onClick={handleSubmit} disabled={loading}>
++            {loading ? <><i className="fas fa-spinner fa-spin" /> Analyzing...</> : <><i className="fas fa-magic" /> Compare AI Tools</>}
++          </button>
++        </div>
++      </div>
++    </div>
++  )
++}
+diff --git a/cloudcompare-frontend/src/components/AI/AiResultsGrid.jsx b/cloudcompare-frontend/src/components/AI/AiResultsGrid.jsx
+index 3c4780d..80cc2ab 100644
+--- a/cloudcompare-frontend/src/components/AI/AiResultsGrid.jsx
++++ b/cloudcompare-frontend/src/components/AI/AiResultsGrid.jsx
+@@ -1,8 +1,42 @@
++import { Bar } from 'react-chartjs-2'
++import {
++  Chart as ChartJS,
++  CategoryScale,
++  LinearScale,
++  BarElement,
++  Title,
++  Tooltip,
++  Legend
++} from 'chart.js'
+ import AiToolCard from './AiToolCard.jsx'
+ 
++ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
++
++const chartColors = ['rgba(0,212,170,0.6)', 'rgba(124,58,237,0.6)', 'rgba(59,130,246,0.6)', 'rgba(251,191,36,0.6)', 'rgba(16,185,129,0.6)']
++
+ export default function AiResultsGrid({ results, query }) {
+   if (!results || !results.tools || results.tools.length === 0) return null
+ 
++  const tools = results.tools
++  const ratingData = {
++    labels: tools.map((t) => t.tool_name || t.toolName),
++    datasets: [{
++      label: 'Rating (out of 10)',
++      data: tools.map((t) => Number(t.score ?? 0)),
++      backgroundColor: chartColors.slice(0, tools.length),
++      borderColor: chartColors.slice(0, tools.length).map((c) => c.replace('0.6', '1')),
++      borderWidth: 1,
++      borderRadius: 4
++    }]
++  }
++  const ratingOptions = {
++    indexAxis: 'y',
++    responsive: true,
++    maintainAspectRatio: false,
++    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` Rating: ${ctx.raw.toFixed(1)}/10` } } },
++    scales: { x: { beginAtZero: true, max: 10, grid: { color: 'rgba(0,212,170,0.06)' }, ticks: { color: '#94a3b8' } }, y: { grid: { display: false }, ticks: { color: '#94a3b8' } } }
++  }
++
+   return (
+     <section className="results-section animate-fade-in-up">
+       <div className="executive-summary-card premium-card" style={{ marginBottom: '1.5rem' }}>
+@@ -13,7 +47,7 @@ export default function AiResultsGrid({ results, query }) {
+           </div>
+         </div>
+         <div className="summary-content">
+-          Found <strong style={{ color: '#fbbf24' }}>{results.totalResults || results.tools.length}</strong> tools for:{" "}
++          Found <strong style={{ color: '#fbbf24' }}>{results.totalResults || tools.length}</strong> tools for:{" "}
+           <em style={{ color: '#22c55e' }}>"{results.purpose || results.originalQuery || query}"</em>
+           {(results.classifiedIntent || results.intent) && (
+             <div className="mt-1 text-xs" style={{ color: '#64748b' }}>
+@@ -24,10 +58,19 @@ export default function AiResultsGrid({ results, query }) {
+       </div>
+ 
+       <div className="recommendations-grid">
+-        {results.tools.map((tool, i) => (
++        {tools.map((tool, i) => (
+           <AiToolCard key={tool.tool_name || tool.toolName || i} tool={tool} index={i} />
+         ))}
+       </div>
++
++      <div className="charts-grid" style={{ marginTop: '2rem' }}>
++        <div className="chart-card premium-card" style={{ gridColumn: '1 / -1' }}>
++          <h3><i className="fas fa-chart-bar" /> AI Tools Rating Comparison</h3>
++          <div className="chart-container" style={{ position: 'relative', height: '300px', width: '100%' }}>
++            <Bar data={ratingData} options={ratingOptions} />
++          </div>
++        </div>
++      </div>
+     </section>
+   )
+ }
+diff --git a/cloudcompare-frontend/src/components/AI/AiToolCard.jsx b/cloudcompare-frontend/src/components/AI/AiToolCard.jsx
+index dc72ddb..ab3b33b 100644
+--- a/cloudcompare-frontend/src/components/AI/AiToolCard.jsx
++++ b/cloudcompare-frontend/src/components/AI/AiToolCard.jsx
+@@ -1,11 +1,13 @@
+ export default function AiToolCard({ tool, index }) {
+-  const scoreColor = tool.score >= 9 ? '#22c55e' : tool.score >= 8 ? '#fbbf24' : '#3b82f6'
++  const score = Number(tool.score ?? 0)
++  const scoreColor = score >= 9 ? '#22c55e' : score >= 8 ? '#fbbf24' : '#3b82f6'
++  const toolUrl = tool.url || (tool.tool_name ? `https://www.google.com/search?q=${encodeURIComponent(tool.tool_name + ' AI Tool')}` : null)
+ 
+   return (
+     <div className="recommendation-card animate-fade-in-up">
+       <div className="recommendation-badge" style={{ background: 'rgba(138,43,226,0.15)', color: '#a78bfa', border: '1px solid rgba(138,43,226,0.3)' }}>
+-        <i className="fas fa-robot" />
+-        <span>#{tool.rank || index + 1} · {tool.provider}</span>
++        <i className="fas fa-trophy" />
++        <span>#{tool.rank || index + 1} · {tool.provider || 'AI'}</span>
+       </div>
+ 
+       <div className="recommendation-content">
+@@ -13,19 +15,17 @@ export default function AiToolCard({ tool, index }) {
+           <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: 'rgba(138,43,226,0.15)', color: '#a78bfa' }}>
+             <i className="fas fa-robot" />
+           </div>
+-          <h3>{tool.tool_name || tool.toolName}</h3>
++          <h3>{tool.tool_name || tool.toolName} <span style={{ fontSize: '0.8em', color: '#94a3b8', fontWeight: 'normal' }}>by {tool.provider}</span></h3>
+         </div>
+ 
+         <div className="recommendation-stats">
+           <div className="stat-item">
+-            <span className="stat-label">AI Score</span>
+-            <span className="stat-value" style={{ color: scoreColor }}>{Number(tool.score).toFixed(1)}</span>
++            <span className="stat-label">Model Engine</span>
++            <span className="stat-value" style={{ fontSize: '0.95rem', color: '#fff' }}>{tool.model_number || tool.modelNumber || '—'}</span>
+           </div>
+           <div className="stat-item">
+-            <span className="stat-label">Model</span>
+-            <span className="stat-value" style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+-              {tool.model_number || tool.modelNumber || '—'}
+-            </span>
++            <span className="stat-label">AI Score</span>
++            <span className="stat-value" style={{ color: scoreColor }}>{score.toFixed(1)}/10</span>
+           </div>
+         </div>
+ 
+@@ -34,9 +34,13 @@ export default function AiToolCard({ tool, index }) {
+         </span>
+ 
+         {tool.description && (
+-          <p className="text-xs leading-relaxed" style={{ color: '#94a3b8' }}>
+-            {tool.description}
+-          </p>
++          <p className="text-xs leading-relaxed" style={{ color: '#94a3b8' }}>{tool.description}</p>
++        )}
++
++        {toolUrl && (
++          <a href={toolUrl} target="_blank" rel="noopener noreferrer" className="visit-service-btn" style={{ borderColor: 'rgba(0,212,170,0.5)', color: '#00d4aa' }}>
++            <i className="fas fa-external-link-alt" /> Try Tool
++          </a>
+         )}
+       </div>
+     </div>
+diff --git a/cloudcompare-frontend/src/components/Chatbot/ChatbotPanel.jsx b/cloudcompare-frontend/src/components/Chatbot/ChatbotPanel.jsx
+index eee25b0..1943237 100644
+--- a/cloudcompare-frontend/src/components/Chatbot/ChatbotPanel.jsx
++++ b/cloudcompare-frontend/src/components/Chatbot/ChatbotPanel.jsx
+@@ -67,12 +67,7 @@ export default function ChatbotPanel({ activeView, cloudContext, aiToolsContext
+   }
+ 
+   return (
+-    <section className="input-section" style={{ marginTop: '2rem' }}>
+-      <div className="section-header">
+-        <h2><i className="fas fa-comments" /> CloudCompare Assistant</h2>
+-        <p>Get chatbot guidance using your current cloud or AI comparison context.</p>
+-      </div>
+-
++    <section className="input-section">
+       <div className="input-row" style={{ gridTemplateColumns: '1fr', gap: '1rem' }}>
+         <div className="input-group">
+           <label><i className="fas fa-chess-knight" /> Choose Chat Mode</label>
+@@ -133,6 +128,7 @@ export default function ChatbotPanel({ activeView, cloudContext, aiToolsContext
+             style={{ display: 'flex', gap: '0.75rem', borderTop: '1px solid var(--glass-border)', padding: '0.75rem' }}
+           >
+             <input
++              id="chat-question-input"
+               type="text"
+               value={question}
+               onChange={(event) => setQuestion(event.target.value)}
+diff --git a/cloudcompare-frontend/src/components/Cloud/ComparisonCharts.jsx b/cloudcompare-frontend/src/components/Cloud/ComparisonCharts.jsx
+index f8c6d18..d8dc3a3 100644
+--- a/cloudcompare-frontend/src/components/Cloud/ComparisonCharts.jsx
++++ b/cloudcompare-frontend/src/components/Cloud/ComparisonCharts.jsx
+@@ -1,85 +1,148 @@
+-import { Bar } from 'react-chartjs-2'
++import { Bar, Doughnut, Line } from 'react-chartjs-2'
+ import {
+   Chart as ChartJS,
+   CategoryScale,
+   LinearScale,
+   BarElement,
++  ArcElement,
++  PointElement,
++  LineElement,
+   Title,
+   Tooltip,
+   Legend
+ } from 'chart.js'
+ 
+-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
++ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Title, Tooltip, Legend)
+ 
+-const providerColors = ['#FF9900', '#4285F4', '#0078D4', '#F80000', '#FF6A00']
++const providerColors = { AWS: '#FF9900', GCP: '#4285F4', Azure: '#0078D4', OCI: '#F80000', Alibaba: '#FF6A00' }
++const colorOf = (platform) => providerColors[platform] || '#64748b'
++const plat = (s) => s.platform || s.provider || 'AWS'
+ 
+-const chartOptions = {
++const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
++
++const barOptions = (max) => ({
+   responsive: true,
+   maintainAspectRatio: false,
+-  plugins: {
+-    legend: { display: false },
+-  },
++  plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(15,23,42,0.95)', borderColor: 'rgba(59,130,246,0.4)', borderWidth: 1 } },
+   scales: {
+-    y: {
+-      beginAtZero: true,
+-      grid: { color: 'rgba(212,160,23,0.08)' },
+-      ticks: { color: '#a89968', font: { size: 11 } }
++    y: { beginAtZero: true, max: max || undefined, grid: { color: 'rgba(212,160,23,0.08)' }, ticks: { color: '#a89968' } },
++    x: { grid: { display: false }, ticks: { color: '#a89968', font: { size: 10 } } }
++  }
++})
++
++function buildBar(services, valueKey, label, max) {
++  return {
++    data: {
++      labels: services.map((s) => s.service_name),
++      datasets: [{
++        label,
++        data: services.map((s) => Number(s[valueKey] ?? s[valueKey === 'score' ? 'final_score' : valueKey]) || 0),
++        backgroundColor: services.map((s) => colorOf(plat(s)) + '88'),
++        borderColor: services.map((s) => colorOf(plat(s))),
++        borderWidth: 2,
++        borderRadius: 8
++      }]
+     },
+-    x: {
+-      grid: { display: false },
+-      ticks: { color: '#a89968', font: { size: 10 } }
+-    }
++    options: barOptions(max)
+   }
+ }
+ 
+-function buildChart(services, labelKey, valueKey, label) {
+-  return {
+-    labels: services.map((s) => s.provider || s[labelKey] || 'Unknown'),
++export default function ComparisonCharts({ services }) {
++  if (!services || services.length === 0) return null
++
++  const costData = {
++    labels: services.map((s) => s.service_name),
+     datasets: [{
+-      label,
+-      data: services.map((s) => Number(s[valueKey]) || 0),
+-      backgroundColor: services.map((_, i) => providerColors[i % providerColors.length] + '88'),
+-      borderColor: services.map((_, i) => providerColors[i % providerColors.length]),
++      label: 'Cost ($)',
++      data: services.map((s) => Number(s.cost ?? s.cost_per_month ?? s.estimated_monthly_cost ?? 0)),
++      backgroundColor: services.map((s) => colorOf(plat(s)) + '88'),
++      borderColor: services.map((s) => colorOf(plat(s))),
+       borderWidth: 2,
+       borderRadius: 8
+     }]
+   }
+-}
++  const perfData = buildBar(services, 'performance_score', 'Performance', 10)
++  const rankData = buildBar(services, 'score', 'Score', 10)
+ 
+-export default function ComparisonCharts({ services }) {
+-  if (!services || services.length === 0) return null
++  // Platform-level aggregation
++  const platforms = [...new Set(services.map((s) => plat(s)))]
++  const platformData = platforms.map((p) => {
++    const ps = services.filter((s) => plat(s) === p)
++    return {
++      platform: p,
++      count: ps.length,
++      avgScore: ps.reduce((a, s) => a + Number(s.score ?? s.final_score ?? 0), 0) / ps.length,
++      avgPopularity: ps.reduce((a, s) => a + Number(s.popularity_score ?? 5), 0) / ps.length
++    }
++  })
++  const platLabels = platformData.map((p) => p.platform)
++  const platBg = platformData.map((p) => colorOf(p.platform))
+ 
+-  const costData = buildChart(services, 'provider', 'estimated_monthly_cost', 'Monthly Cost ($)')
+-  // Fallback: if no estimated_monthly_cost, use price_per_hour * 730
+-  if (costData.datasets[0].data.every((v) => v === 0)) {
+-    costData.datasets[0].data = services.map((s) => Number(s.price_per_hour || 0) * 730)
++  const distributionData = {
++    labels: platLabels,
++    datasets: [{ data: platformData.map((p) => p.count), backgroundColor: platBg.map((c) => c + 'D9'), borderColor: 'rgba(15,23,42,0.95)', borderWidth: 4, hoverOffset: 16 }]
+   }
++  const valueData = buildBar(platformData, 'avgScore', 'Value Score', 10)
++  const popData = buildBar(platformData, 'avgPopularity', 'Popularity', 10)
++
++  // Trend line per service
++  const trendDatasets = services.map((s, idx) => {
++    const base = Number(s.cost ?? s.cost_per_month ?? s.estimated_monthly_cost ?? 50)
++    return {
++      label: `${plat(s)} - ${s.service_name}`,
++      data: months.map((_, i) => parseFloat((base * (Math.sin(i * 0.5 + idx) * 0.15 + 1) * (1 - (idx + 1) * 0.1 + i * 0.02)).toFixed(2))),
++      borderColor: colorOf(plat(s)),
++      backgroundColor: colorOf(plat(s)) + '1A',
++      borderWidth: 2, fill: false, tension: 0, pointRadius: 4, pointBackgroundColor: colorOf(plat(s))
++    }
++  })
+ 
+-  const perfData = buildChart(services, 'provider', 'performance_score', 'Performance')
+-  const popData = buildChart(services, 'provider', 'popularity_score', 'Popularity')
++  const trendData = { labels: months, datasets: trendDatasets }
++  const trendOptions = {
++    responsive: true,
++    maintainAspectRatio: false,
++    plugins: { legend: { display: true, position: 'top', labels: { color: '#94a3b8', usePointStyle: true, font: { size: 11 } } } },
++    scales: { y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b' } }, x: { grid: { display: false }, ticks: { color: '#64748b' } } }
++  }
+ 
+   return (
+-    <div className="charts-row" style={{ marginTop: '2rem' }}>
+-      <div className="chart-container">
+-        <h3><i className="fas fa-dollar-sign" /> Cost Comparison</h3>
+-        <div className="h-52">
+-          <Bar data={costData} options={chartOptions} />
++    <>
++      <div className="charts-row" style={{ marginTop: '2rem' }}>
++        <div className="chart-container">
++          <h3><i className="fas fa-dollar-sign" /> Cost Comparison</h3>
++          <div className="h-52"><Bar data={costData} options={barOptions()} /></div>
++        </div>
++        <div className="chart-container">
++          <h3><i className="fas fa-chart-line" /> Performance Score</h3>
++          <div className="h-52"><Bar data={perfData} options={perfData.options} /></div>
++        </div>
++        <div className="chart-container">
++          <h3><i className="fas fa-trophy" /> Ranking Score</h3>
++          <div className="h-52"><Bar data={rankData} options={rankData.options} /></div>
+         </div>
+       </div>
+ 
+-      <div className="chart-container">
+-        <h3><i className="fas fa-tachometer-alt" /> Performance Score</h3>
+-        <div className="h-52">
+-          <Bar data={perfData} options={chartOptions} />
++      <div className="charts-row">
++        <div className="chart-container">
++          <h3><i className="fas fa-chart-pie" /> Platform Distribution</h3>
++          <div className="h-52"><Doughnut data={distributionData} options={{ responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', usePointStyle: true } } } }} /></div>
++        </div>
++        <div className="chart-container">
++          <h3><i className="fas fa-balance-scale" /> Value Score (Cost vs Performance)</h3>
++          <div className="h-52"><Bar data={valueData} options={valueData.options} /></div>
++        </div>
++        <div className="chart-container">
++          <h3><i className="fas fa-star" /> Popularity by Platform</h3>
++          <div className="h-52"><Bar data={popData} options={popData.options} /></div>
+         </div>
+       </div>
+ 
+-      <div className="chart-container">
+-        <h3><i className="fas fa-fire" /> Popularity</h3>
+-        <div className="h-52">
+-          <Bar data={popData} options={chartOptions} />
++      <div className="charts-row">
++        <div className="chart-container full-width">
++          <h3><i className="fas fa-chart-line" /> Cost Trend Analysis</h3>
++          <div className="h-64"><Line data={trendData} options={trendOptions} /></div>
+         </div>
+       </div>
+-    </div>
++    </>
+   )
+ }
+diff --git a/cloudcompare-frontend/src/components/Cloud/ComparisonTable.jsx b/cloudcompare-frontend/src/components/Cloud/ComparisonTable.jsx
+new file mode 100644
+index 0000000..03bf3a8
+--- /dev/null
++++ b/cloudcompare-frontend/src/components/Cloud/ComparisonTable.jsx
+@@ -0,0 +1,95 @@
++import { useMemo, useState } from 'react'
++import { serviceUrl } from '../../utils/report.js'
++
++const ICONS = { AWS: 'fab fa-aws', GCP: 'fab fa-google', Azure: 'fab fa-microsoft', OCI: 'fas fa-cloud', Alibaba: 'fas fa-server' }
++const COLORS = { AWS: '#FF9900', GCP: '#4285F4', Azure: '#0078D4', OCI: '#F80000', Alibaba: '#FF6A00' }
++
++export default function ComparisonTable({ services }) {
++  const [sortBy, setSortBy] = useState('score')
++
++  const sorted = useMemo(() => {
++    const list = [...services]
++    if (sortBy === 'cost') {
++      list.sort((a, b) => Number(a.cost ?? a.cost_per_month ?? a.estimated_monthly_cost ?? 0) - Number(b.cost ?? b.cost_per_month ?? b.estimated_monthly_cost ?? 0))
++    } else {
++      list.sort((a, b) => Number(b.score ?? b.final_score ?? 0) - Number(a.score ?? a.final_score ?? 0))
++    }
++    return list
++  }, [services, sortBy])
++
++  if (!sorted.length) return null
++
++  const perfClass = (lvl) => (lvl === 'High' ? 'perf-high' : lvl === 'Medium' ? 'perf-medium' : 'perf-low')
++
++  return (
++    <div className="table-container">
++      <div className="table-header">
++        <h3><i className="fas fa-list" /> Detailed Comparison</h3>
++        <div className="table-actions">
++          <button className="filter-btn" onClick={() => setSortBy('score')}><i className="fas fa-undo" /> Clear Sort</button>
++          <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
++            <option value="score">Sort by Score</option>
++            <option value="cost">Sort by Cost</option>
++          </select>
++        </div>
++      </div>
++      <div style={{ overflowX: 'auto' }}>
++        <table className="results-table">
++          <thead>
++            <tr>
++              <th>#</th>
++              <th>Platform</th>
++              <th>Service</th>
++              <th>CPU</th>
++              <th>RAM</th>
++              <th>Storage</th>
++              <th>Cost/Hour</th>
++              <th>Cost/Day</th>
++              <th>Cost/Week</th>
++              <th>Cost/Month</th>
++              <th>Performance</th>
++              <th>Popularity</th>
++              <th>Score</th>
++            </tr>
++          </thead>
++          <tbody>
++            {sorted.map((s, i) => {
++              const platform = s.platform || s.provider || 'AWS'
++              const rank = s.rank || i + 1
++              const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other'
++              const color = COLORS[platform] || '#64748b'
++              const url = serviceUrl(platform, s.service_name)
++              const svc = url ? (
++                <a href={url} target="_blank" rel="noopener noreferrer" className="table-service-link">
++                  {s.service_name} <i className="fas fa-external-link-alt" style={{ fontSize: '0.7em', opacity: 0.6 }} />
++                </a>
++              ) : s.service_name
++              return (
++                <tr key={`${platform}-${s.service_name}-${i}`}>
++                  <td><span className={`rank-badge ${rankClass}`}>#{rank}</span></td>
++                  <td>
++                    <span className="platform-badge" style={{ background: color }}>
++                      <i className={ICONS[platform] || 'fas fa-cloud'} style={{ marginRight: 4 }} />
++                      {platform}
++                    </span>
++                  </td>
++                  <td>{svc}</td>
++                  <td>{s.cpu ?? '-'}</td>
++                  <td>{s.ram ?? '-'}</td>
++                  <td>{s.storage ?? '-'}</td>
++                  <td><strong>${Number(s.cost_per_hour ?? 0).toFixed(4)}</strong></td>
++                  <td><strong>${Number(s.cost_per_day ?? 0).toFixed(2)}</strong></td>
++                  <td><strong>${Number(s.cost_per_week ?? 0).toFixed(2)}</strong></td>
++                  <td><strong>${Number(s.cost_per_month ?? s.estimated_monthly_cost ?? 0).toFixed(2)}</strong></td>
++                  <td><span className={perfClass(s.performanceLevel || (Number(s.performance_score ?? 0) >= 75 ? 'High' : Number(s.performance_score ?? 0) >= 50 ? 'Medium' : 'Low'))}>{s.performanceLevel || (Number(s.performance_score ?? 0) >= 75 ? 'High' : Number(s.performance_score ?? 0) >= 50 ? 'Medium' : 'Low')}</span></td>
++                  <td>{(Number(s.popularity_score ?? 5)).toFixed(1)}/10</td>
++                  <td><strong>{Number(s.score ?? s.final_score ?? 0).toFixed(1)}</strong></td>
++                </tr>
++              )
++            })}
++          </tbody>
++        </table>
++      </div>
++    </div>
++  )
++}
+diff --git a/cloudcompare-frontend/src/components/Cloud/ExecutiveSummary.jsx b/cloudcompare-frontend/src/components/Cloud/ExecutiveSummary.jsx
+new file mode 100644
+index 0000000..2e3980a
+--- /dev/null
++++ b/cloudcompare-frontend/src/components/Cloud/ExecutiveSummary.jsx
+@@ -0,0 +1,66 @@
++import { useState } from 'react'
++import { exportToPDF, exportToCSV } from '../../utils/report.js'
++
++// Generates the "AI Architect's Verdict" text client-side from results,
++// matching Render's generateAiSummary() logic.
++export function buildVerdict(services) {
++  if (!services || services.length === 0) return ''
++  const bestCost = services.reduce((min, p) => (Number(p.cost ?? p.cost_per_month ?? 0) < Number(min.cost ?? min.cost_per_month ?? 0) ? p : min), services[0])
++  const bestPerf = services.reduce((max, p) => (Number(p.performance_score ?? 0) > Number(max.performance_score ?? 0) ? p : max), services[0])
++  const bestCostN = Number(bestCost.cost ?? bestCost.cost_per_month ?? 0)
++  const bestPerfN = Number(bestPerf.performance_score ?? 0)
++
++  let verdict = 'Based on my architectural analysis, '
++  if (bestCost.platform === bestPerf.platform) {
++    verdict += `<strong>${bestCost.platform}</strong> is the clear leader for this workload, offering both the lowest cost ($${bestCostN.toFixed(2)}) and peak performance.`
++  } else {
++    verdict += `you face a trade-off: <strong>${bestCost.platform}</strong> is the budget leader at $${bestCostN.toFixed(2)}, but <strong>${bestPerf.platform}</strong> delivers superior performance (Score: ${bestPerfN.toFixed(1)}/10).`
++  }
++  verdict += `<br><br>Recommended Action: Deploy to <strong>${bestPerf.platform}</strong> if uptime and throughput are critical; otherwise, <strong>${bestCost.platform}</strong> provides the optimal ROI.`
++  return verdict
++}
++
++export default function ExecutiveSummary({ services, categoryLabel, onAskArchitect }) {
++  const [verdict, setVerdict] = useState(null)
++  const [generating, setGenerating] = useState(false)
++
++  // Lazy-generate the verdict once (mimics the typing indicator).
++  if (!verdict && services && services.length) {
++    setTimeout(() => {
++      setGenerating(true)
++      setTimeout(() => {
++        setVerdict(buildVerdict(services))
++        setGenerating(false)
++      }, 600)
++    }, 0)
++  }
++
++  return (
++    <div className="executive-summary-card premium-card" style={{ marginBottom: '2rem' }}>
++      <div className="summary-header">
++        <div className="summary-title">
++          <i className="fas fa-robot" />
++          <span>AI Architect&apos;s Verdict</span>
++        </div>
++        <div className="summary-actions">
++          <button className="action-btn" onClick={() => onAskArchitect?.()}>
++            <i className="fas fa-comments" /> Ask Architect
++          </button>
++          <button className="action-btn" onClick={() => exportToPDF(services, categoryLabel)}>
++            <i className="fas fa-file-pdf" /> PDF Report
++          </button>
++          <button className="action-btn" onClick={() => exportToCSV(services)}>
++            <i className="fas fa-file-csv" /> CSV
++          </button>
++        </div>
++      </div>
++      <div className="summary-content">
++        {generating || (!verdict) ? (
++          <div className="typing-indicator"><span /><span /><span /></div>
++        ) : (
++          <div dangerouslySetInnerHTML={{ __html: verdict }} />
++        )}
++      </div>
++    </div>
++  )
++}
+diff --git a/cloudcompare-frontend/src/components/Cloud/ProviderCard.jsx b/cloudcompare-frontend/src/components/Cloud/ProviderCard.jsx
+index cf0cda2..235f31d 100644
+--- a/cloudcompare-frontend/src/components/Cloud/ProviderCard.jsx
++++ b/cloudcompare-frontend/src/components/Cloud/ProviderCard.jsx
+@@ -1,3 +1,5 @@
++import { serviceUrl } from '../../utils/report.js'
++
+ const providerColors = {
+   AWS: { bg: 'rgba(255,153,0,0.15)', color: '#FF9900', icon: 'fab fa-aws' },
+   GCP: { bg: 'rgba(66,133,244,0.15)', color: '#4285F4', icon: 'fab fa-google' },
+@@ -6,41 +8,44 @@ const providerColors = {
+   Alibaba: { bg: 'rgba(255,106,0,0.15)', color: '#FF6A00', icon: 'fas fa-server' }
+ }
+ 
++function rankBadgeStyle(index) {
++  if (index === 0) return { background: 'linear-gradient(135deg, rgba(251,191,36,0.2), rgba(245,158,11,0.2))', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.5)' }
++  if (index === 1) return { background: 'linear-gradient(135deg, rgba(148,163,184,0.2), rgba(100,116,139,0.2))', color: '#cbd5e1', border: '1px solid rgba(148,163,184,0.5)' }
++  if (index === 2) return { background: 'linear-gradient(135deg, rgba(205,127,50,0.2), rgba(184,115,51,0.2))', color: '#cd7f32', border: '1px solid rgba(205,127,50,0.5)' }
++  return { background: 'rgba(59,130,246,0.15)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.3)' }
++}
++
+ export default function ProviderCard({ service, rank }) {
+-  const provider = service.provider || 'AWS'
++  const provider = service.platform || service.provider || 'AWS'
+   const colors = providerColors[provider] || providerColors.AWS
+-  const score = service.final_score || service.performance_score || 0
+-  const cost = service.estimated_monthly_cost || (service.price_per_hour * 730) || 0
++  const score = Number(service.score ?? service.final_score ?? service.performance_score ?? 0)
++  const cost = Number(service.cost ?? service.cost_per_month ?? service.estimated_monthly_cost ?? (service.price_per_hour * 730) ?? 0)
++  const perf = service.performanceLevel || (score >= 7.5 ? 'High' : score >= 5 ? 'Medium' : 'Low')
++  const url = serviceUrl(provider, service.service_name)
+ 
+   return (
+     <div className="recommendation-card animate-fade-in-up">
+-      <div
+-        className="recommendation-badge"
+-        style={{ background: colors.bg, color: colors.color, border: `1px solid ${colors.color}` }}
+-      >
++      <div className="recommendation-badge" style={rankBadgeStyle(rank - 1)}>
+         <i className={colors.icon} />
+-        <span>#{rank} · {provider}</span>
++        <span>#{rank} Recommendation</span>
+       </div>
+ 
+       <div className="recommendation-content">
+         <div className="recommendation-platform">
+-          <div
+-            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
+-            style={{ background: colors.bg, color: colors.color }}
+-          >
++          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: colors.bg, color: colors.color }}>
+             <i className={colors.icon} />
+           </div>
+-          <h3>{service.service_name}</h3>
++          <h3>{provider} · {service.service_name}</h3>
+         </div>
+ 
+         <div className="recommendation-stats">
+           <div className="stat-item">
+-            <span className="stat-label">Performance</span>
+-            <span className="stat-value performance">{Number(score).toFixed(1)}</span>
++            <span className="stat-label">Est. Cost</span>
++            <span className="stat-value cost" style={{ fontSize: '1.25rem' }}>${cost.toFixed(2)}</span>
+           </div>
+           <div className="stat-item">
+-            <span className="stat-label">Monthly Cost</span>
+-            <span className="stat-value cost">${Number(cost).toFixed(2)}</span>
++            <span className="stat-label">Performance</span>
++            <span className="stat-value performance" style={{ fontSize: '1.25rem', color: colors.color }}>{perf}</span>
+           </div>
+         </div>
+ 
+@@ -55,6 +60,11 @@ export default function ProviderCard({ service, rank }) {
+               <i className="fas fa-memory mr-1" />{service.ram} GB
+             </span>
+           )}
++          {service.storage && (
++            <span className="text-xs px-2 py-1 rounded-md" style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}>
++              <i className="fas fa-hdd mr-1" />{service.storage} GB
++            </span>
++          )}
+           {service.region && (
+             <span className="text-xs px-2 py-1 rounded-md" style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}>
+               <i className="fas fa-globe mr-1" />{service.region}
+@@ -63,9 +73,13 @@ export default function ProviderCard({ service, rank }) {
+         </div>
+ 
+         {service.description && (
+-          <p className="text-xs leading-relaxed" style={{ color: '#94a3b8' }}>
+-            {service.description}
+-          </p>
++          <p className="text-xs leading-relaxed" style={{ color: '#94a3b8' }}>{service.description}</p>
++        )}
++
++        {url && (
++          <a href={url} target="_blank" rel="noopener noreferrer" className="visit-service-btn" style={{ borderColor: colors.color, color: colors.color }}>
++            <i className="fas fa-external-link-alt" /> Visit Service
++          </a>
+         )}
+       </div>
+     </div>
+diff --git a/cloudcompare-frontend/src/components/Cloud/ProviderFilterBar.jsx b/cloudcompare-frontend/src/components/Cloud/ProviderFilterBar.jsx
+new file mode 100644
+index 0000000..6e1346f
+--- /dev/null
++++ b/cloudcompare-frontend/src/components/Cloud/ProviderFilterBar.jsx
+@@ -0,0 +1,30 @@
++const PROVIDERS = ['AWS', 'GCP', 'Azure', 'OCI', 'Alibaba']
++const ICONS = { AWS: 'fab fa-aws', GCP: 'fab fa-google', Azure: 'fab fa-microsoft', OCI: 'fas fa-cloud', Alibaba: 'fas fa-server' }
++
++export default function ProviderFilterBar({ active, onChange, providers }) {
++  const list = providers?.length ? providers : PROVIDERS
++  return (
++    <div className="provider-filter-bar">
++      <span className="filter-label"><i className="fas fa-filter" /> Filter by Provider:</span>
++      <div className="provider-filter-chips">
++        <button
++          className={`provider-chip ${active === 'all' ? 'active' : ''}`}
++          data-provider="all"
++          onClick={() => onChange('all')}
++        >
++          <i className="fas fa-th-list" /> All Services
++        </button>
++        {list.map((p) => (
++          <button
++            key={p}
++            className={`provider-chip ${active === p ? 'active' : ''}`}
++            data-provider={p}
++            onClick={() => onChange(p)}
++          >
++            <i className={ICONS[p] || 'fas fa-cloud'} /> {p}
++          </button>
++        ))}
++      </div>
++    </div>
++  )
++}
+diff --git a/cloudcompare-frontend/src/components/Cloud/ProviderStatsGrid.jsx b/cloudcompare-frontend/src/components/Cloud/ProviderStatsGrid.jsx
+new file mode 100644
+index 0000000..6bb9e29
+--- /dev/null
++++ b/cloudcompare-frontend/src/components/Cloud/ProviderStatsGrid.jsx
+@@ -0,0 +1,41 @@
++const ICONS = { AWS: 'fab fa-aws', GCP: 'fab fa-google', Azure: 'fab fa-microsoft', OCI: 'fas fa-cloud', Alibaba: 'fas fa-server' }
++
++export default function ProviderStatsGrid({ stats, onFilter }) {
++  if (!stats || stats.length === 0) return null
++  return (
++    <div className="provider-stats-container" style={{ marginTop: '2rem' }}>
++      <h3><i className="fas fa-server" /> Provider Statistics</h3>
++      <div
++        className="provider-stats-grid"
++        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}
++      >
++        {stats.map((stat) => (
++          <div
++            key={stat.platform}
++            className="provider-stat-card"
++            title={`Click to filter results for ${stat.platform}`}
++            onClick={() => onFilter?.(stat.platform)}
++            style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', cursor: 'pointer' }}
++          >
++            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
++              <i className={ICONS[stat.platform] || 'fas fa-cloud'} style={{ fontSize: '1.25rem', color: '#d4a017' }} />
++              <strong style={{ fontSize: '1.1rem', color: 'white' }}>{stat.platform}</strong>
++            </div>
++            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
++              <span style={{ color: '#94a3b8' }}>Services:</span>
++              <span style={{ color: 'white', fontWeight: 500 }}>{stat.count}</span>
++            </div>
++            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
++              <span style={{ color: '#94a3b8' }}>Avg Cost:</span>
++              <span style={{ color: 'white', fontWeight: 500 }}>${Number(stat.avgCost).toFixed(2)}/mo</span>
++            </div>
++            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
++              <span style={{ color: '#94a3b8' }}>Avg Performance:</span>
++              <span style={{ color: 'white', fontWeight: 500 }}>{Number(stat.avgPerformance).toFixed(1)}/10</span>
++            </div>
++          </div>
++        ))}
++      </div>
++    </div>
++  )
++}
+diff --git a/cloudcompare-frontend/src/components/Layout/Footer.jsx b/cloudcompare-frontend/src/components/Layout/Footer.jsx
+new file mode 100644
+index 0000000..51bbe65
+--- /dev/null
++++ b/cloudcompare-frontend/src/components/Layout/Footer.jsx
+@@ -0,0 +1,14 @@
++export default function Footer() {
++  return (
++    <footer className="footer">
++      <p>© 2026 CloudCompare AI - Multi-Cloud Service Recommendation System</p>
++      <div className="provider-logos">
++        <a href="https://aws.amazon.com/" target="_blank" rel="noopener noreferrer" className="provider-badge aws"><i className="fab fa-aws" /> AWS</a>
++        <a href="https://cloud.google.com/" target="_blank" rel="noopener noreferrer" className="provider-badge gcp"><i className="fab fa-google" /> GCP</a>
++        <a href="https://azure.microsoft.com/" target="_blank" rel="noopener noreferrer" className="provider-badge azure"><i className="fab fa-microsoft" /> Azure</a>
++        <a href="https://www.oracle.com/cloud/" target="_blank" rel="noopener noreferrer" className="provider-badge oci"><i className="fas fa-cloud" /> Oracle Cloud</a>
++        <a href="https://www.alibabacloud.com/" target="_blank" rel="noopener noreferrer" className="provider-badge alibaba"><i className="fas fa-server" /> Alibaba Cloud</a>
++      </div>
++    </footer>
++  )
++}
+diff --git a/cloudcompare-frontend/src/legacy-dashboard.css b/cloudcompare-frontend/src/legacy-dashboard.css
+index 17fd36d..2dbfb5a 100644
+--- a/cloudcompare-frontend/src/legacy-dashboard.css
++++ b/cloudcompare-frontend/src/legacy-dashboard.css
+@@ -1587,3 +1587,56 @@ body.light-theme .provider-chip.active {
+   gap: 6px;
+ }
+ .login-link:hover { background: rgba(0, 212, 170, 0.28); color: #fff; }
++
++/* ── React feature-port additions (charts grid, cards, results header) ────── */
++.charts-grid {
++  display: grid;
++  grid-template-columns: 1fr;
++  gap: 1rem;
++}
++.chart-card {
++  background: var(--glass-bg);
++  backdrop-filter: blur(16px);
++  -webkit-backdrop-filter: blur(16px);
++  border: 1px solid var(--glass-border);
++  border-radius: 20px;
++  padding: 1.5rem;
++}
++.chart-card h3 {
++  font-size: 1.05rem;
++  display: flex;
++  align-items: center;
++  gap: 10px;
++  margin-bottom: 1rem;
++}
++.chart-card h3 i { color: var(--primary); }
++.results-header {
++  display: flex;
++  justify-content: space-between;
++  align-items: center;
++  margin-bottom: 1rem;
++  flex-wrap: wrap;
++  gap: 1rem;
++}
++.results-header h2 {
++  font-size: 1.1rem;
++  display: flex;
++  align-items: center;
++  gap: 10px;
++}
++.results-header h2 i { color: var(--primary); }
++.results-header .header-actions { display: flex; gap: 8px; }
++.h-52 { height: 200px; }
++.h-64 { height: 260px; }
++.visit-service-btn {
++  margin-top: 0.5rem;
++  display: inline-flex;
++  align-items: center;
++  gap: 6px;
++  padding: 0.4rem 0.9rem;
++  border-radius: 8px;
++  border: 1px solid;
++  font-size: 0.8rem;
++  text-decoration: none;
++  transition: all 0.3s;
++}
+diff --git a/cloudcompare-frontend/src/pages/DashboardPage.jsx b/cloudcompare-frontend/src/pages/DashboardPage.jsx
+index 75c74f4..e0c7738 100644
+--- a/cloudcompare-frontend/src/pages/DashboardPage.jsx
++++ b/cloudcompare-frontend/src/pages/DashboardPage.jsx
+@@ -1,15 +1,20 @@
+-import { useState } from 'react'
++import { useState, useEffect } from 'react'
+ import Header from '../components/Layout/Header.jsx'
++import Footer from '../components/Layout/Footer.jsx'
+ import CategorySelector from '../components/Cloud/CategorySelector.jsx'
+ import ResourceInputs from '../components/Cloud/ResourceInputs.jsx'
+ import ServiceTypeSelect from '../components/Cloud/ServiceTypeSelect.jsx'
+ import ProviderCard from '../components/Cloud/ProviderCard.jsx'
++import ProviderFilterBar from '../components/Cloud/ProviderFilterBar.jsx'
++import ProviderStatsGrid from '../components/Cloud/ProviderStatsGrid.jsx'
++import ComparisonTable from '../components/Cloud/ComparisonTable.jsx'
+ import ComparisonCharts from '../components/Cloud/ComparisonCharts.jsx'
+-import NlpQueryInput from '../components/AI/NlpQueryInput.jsx'
++import ExecutiveSummary from '../components/Cloud/ExecutiveSummary.jsx'
++import AiPurposeInput from '../components/AI/AiPurposeInput.jsx'
+ import AiResultsGrid from '../components/AI/AiResultsGrid.jsx'
+ import ChatbotPanel from '../components/Chatbot/ChatbotPanel.jsx'
+ import { useCompare } from '../hooks/useCompare.js'
+-import { aiApi } from '../api/client.js'
++import { aiApi, cloudApi } from '../api/client.js'
+ 
+ export default function DashboardPage() {
+   const [activeView, setActiveView] = useState('cloud')
+@@ -17,37 +22,54 @@ export default function DashboardPage() {
+   const [category, setCategory] = useState('compute')
+   const [serviceType, setServiceType] = useState('all')
+   const [priority, setPriority] = useState('balanced')
++  const [region, setRegion] = useState('all')
++  const [regions, setRegions] = useState([])
+   const [resources, setResources] = useState({ cpu: 2, ram: 4, storage: 100, hours: 730 })
+-  const { results: cloudResults, loading: cloudLoading, error: cloudError, compare } = useCompare()
++  const [providerFilter, setProviderFilter] = useState('all')
++
++  const { results: cloudResults, loading: cloudLoading, error: cloudError, compare, clearResults } = useCompare()
+ 
+   const [aiResults, setAiResults] = useState(null)
+   const [aiLoading, setAiLoading] = useState(false)
+   const [aiError, setAiError] = useState(null)
+   const [lastQuery, setLastQuery] = useState('')
+ 
++  const servicesList = cloudResults?.services || (Array.isArray(cloudResults) ? cloudResults : [])
++  const filteredServices = providerFilter === 'all'
++    ? servicesList
++    : servicesList.filter((s) => s.platform === providerFilter)
++
++  // Load regions once
++  useEffect(() => {
++    cloudApi.getRegions()
++      .then((res) => setRegions(res.data?.data || []))
++      .catch(() => setRegions([]))
++  }, [])
++
+   const handleCompare = () => {
+     compare({
+       category,
+       serviceType,
+       priority,
++      region,
+       cpu: resources.cpu,
+       ram: resources.ram,
+       storage: resources.storage,
+-      hours: resources.hours,
+-      region: 'all'
++      hours: resources.hours
+     })
+   }
+ 
+-  const handleNlpQuery = async (query) => {
++  const handleAiSubmit = async ({ purpose, queryText }) => {
+     setAiLoading(true)
+     setAiError(null)
+-    setLastQuery(query)
++    const effectiveQuery = queryText || purpose
++    setLastQuery(effectiveQuery)
+     try {
+       let res
+       try {
+-        res = await aiApi.nlpCompare(query)
++        res = await aiApi.compareTools(effectiveQuery)
+       } catch {
+-        res = await aiApi.compareTools(query)
++        res = await aiApi.nlpCompare(effectiveQuery)
+       }
+       const payload = res.data?.data || res.data || null
+       setAiResults(payload)
+@@ -58,7 +80,18 @@ export default function DashboardPage() {
+     }
+   }
+ 
+-  const servicesList = cloudResults?.services || (Array.isArray(cloudResults) ? cloudResults : [])
++  const handleAskArchitect = () => {
++    // Switch to cloud view and scroll to the chatbot with a prepared question.
++    setActiveView('cloud')
++    setTimeout(() => {
++      const el = document.getElementById('chat-question-input')
++      if (el) {
++        el.value = 'Using my current comparison results, explain the best deployment choice, the main trade-off, and the next deployment step.'
++        el.focus()
++      }
++      document.getElementById('chatbot-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
++    }, 50)
++  }
+ 
+   return (
+     <div className="app-container">
+@@ -92,42 +125,61 @@ export default function DashboardPage() {
+                 <p>Select your cloud service needs and we'll find the best option</p>
+               </div>
+ 
+-              <CategorySelector selected={category} onChange={(c) => { setCategory(c); setServiceType('all') }} />
+-
+-              <ResourceInputs values={resources} onChange={setResources} />
+-
+-              <div className="input-row">
+-                <ServiceTypeSelect category={category} value={serviceType} onChange={setServiceType} />
+-
+-                <div className="input-group">
+-                  <label><i className="fas fa-sort-amount-up" /> Priority</label>
+-                  <div className="premium-select-wrapper">
+-                    <select
+-                      id="priority-select"
+-                      value={priority}
+-                      onChange={(e) => setPriority(e.target.value)}
+-                      className="premium-select"
+-                    >
+-                      <option value="balanced">Balanced (Cost + Performance)</option>
+-                      <option value="cost">Cost Optimization</option>
+-                      <option value="performance">Maximum Performance</option>
++              <div className="input-grid">
++                <CategorySelector selected={category} onChange={(c) => { setCategory(c); setServiceType('all') }} />
++
++                <ResourceInputs values={resources} onChange={setResources} />
++
++                <div className="input-row">
++                  <div className="input-group">
++                    <label><i className="fas fa-globe" /> Region</label>
++                    <select id="region" value={region} onChange={(e) => setRegion(e.target.value)}>
++                      <option value="all">All Regions</option>
++                      {regions.map((r) => (
++                        <option key={r.value} value={r.value}>{r.label}</option>
++                      ))}
+                     </select>
+-                    <i className="fas fa-chevron-down select-arrow" />
+                   </div>
+-                </div>
+ 
+-                <div className="input-group action-group">
+-                  <button className="compare-btn" id="compare-btn" onClick={handleCompare} disabled={cloudLoading}>
+-                    {cloudLoading ? (
+-                      <div className="pulse-loader"><span /><span /><span /></div>
+-                    ) : (
+-                      <><i className="fas fa-rocket" /> Compare Services</>
+-                    )}
+-                  </button>
++                  <ServiceTypeSelect category={category} value={serviceType} onChange={setServiceType} />
++
++                  <div className="input-group">
++                    <label><i className="fas fa-sort-amount-up" /> Priority</label>
++                    <div className="premium-select-wrapper">
++                      <select
++                        id="priority-select"
++                        value={priority}
++                        onChange={(e) => setPriority(e.target.value)}
++                        className="premium-select"
++                      >
++                        <option value="balanced">Balanced (Cost + Performance)</option>
++                        <option value="cost">Cost Optimization</option>
++                        <option value="performance">Maximum Performance</option>
++                      </select>
++                      <i className="fas fa-chevron-down select-arrow" />
++                    </div>
++                  </div>
++
++                  <div className="input-group action-group">
++                    <button className="compare-btn" id="compare-btn" onClick={handleCompare} disabled={cloudLoading}>
++                      {cloudLoading ? (
++                        <div className="pulse-loader"><span /><span /><span /></div>
++                      ) : (
++                        <><i className="fas fa-rocket" /> Compare Services</>
++                      )}
++                    </button>
++                  </div>
+                 </div>
+               </div>
+             </section>
+ 
++            {cloudLoading && (
++              <div className="loading-state">
++                <div className="loader"><i className="fas fa-cloud" /></div>
++                <p>Analyzing cloud services...</p>
++              </div>
++            )}
++
+             {cloudError && (
+               <div className="empty-state" style={{ marginBottom: '1.5rem' }}>
+                 <div className="empty-icon"><i className="fas fa-exclamation-triangle" /></div>
+@@ -136,33 +188,33 @@ export default function DashboardPage() {
+               </div>
+             )}
+ 
+-            {cloudResults && (
++            {cloudResults && !cloudLoading && (
+               <section className="results-section">
+-                {cloudResults.recommendation && (
+-                  <div className="executive-summary-card premium-card" style={{ marginBottom: '1.5rem' }}>
+-                    <div className="summary-header">
+-                      <div className="summary-title">
+-                        <i className="fas fa-star" />
+-                        <span>Top Recommendation</span>
+-                      </div>
+-                    </div>
+-                    <div className="summary-content">{cloudResults.recommendation}</div>
+-                  </div>
+-                )}
++                <ExecutiveSummary
++                  services={filteredServices}
++                  categoryLabel={category}
++                  onAskArchitect={handleAskArchitect}
++                />
++
++                <ProviderFilterBar active={providerFilter} onChange={setProviderFilter} providers={servicesList.map((s) => s.platform)} />
+ 
+                 <div className="recommendations-grid">
+-                  {servicesList.map((svc, i) => (
+-                    <ProviderCard key={svc.provider || i} service={svc} rank={i + 1} />
++                  {filteredServices.map((svc, i) => (
++                    <ProviderCard key={`${svc.platform}-${svc.service_name}-${i}`} service={svc} rank={i + 1} />
+                   ))}
+                 </div>
+ 
+-                <ComparisonCharts services={servicesList} />
++                <ComparisonCharts services={filteredServices} />
++
++                <ProviderStatsGrid stats={cloudResults.providerStats} onFilter={setProviderFilter} />
++
++                <ComparisonTable services={filteredServices} />
+               </section>
+             )}
+ 
+-            {!cloudResults && !cloudError && (
++            {!cloudResults && !cloudError && !cloudLoading && (
+               <div className="empty-state">
+-                <div className="empty-icon"><i className="fas fa-server" /></div>
++                <div className="empty-icon"><i className="fas fa-cloud-upload-alt" /></div>
+                 <h3>Ready to Compare</h3>
+                 <p>Configure your requirements above and click "Compare Services" to find the best cloud service for your needs.</p>
+                 <div className="features-grid">
+@@ -181,11 +233,18 @@ export default function DashboardPage() {
+             <section className="input-section">
+               <div className="section-header">
+                 <h2><i className="fas fa-brain" /> AI Tool Recommendation</h2>
+-                <p>Ask in plain English — our NLP engine will find the best AI tools for your needs</p>
++                <p>Select your purpose and we'll find the best AI tools for the job</p>
+               </div>
+-              <NlpQueryInput onSubmit={handleNlpQuery} loading={aiLoading} />
++              <AiPurposeInput onSubmit={handleAiSubmit} loading={aiLoading} />
+             </section>
+ 
++            {aiLoading && (
++              <div className="loading-state">
++                <div className="loader"><i className="fas fa-robot" /></div>
++                <p>Analyzing AI tools...</p>
++              </div>
++            )}
++
+             {aiError && (
+               <div className="empty-state">
+                 <div className="empty-icon"><i className="fas fa-exclamation-triangle" /></div>
+@@ -195,32 +254,41 @@ export default function DashboardPage() {
+             )}
+ 
+             {aiResults && <AiResultsGrid results={aiResults} query={lastQuery} />}
+-            {!aiResults && !aiError && (
++            {!aiResults && !aiError && !aiLoading && (
+               <div className="empty-state">
+                 <div className="empty-icon"><i className="fas fa-robot" /></div>
+                 <h3>Ready to Compare AI</h3>
+-                <p>Enter a query above to find the best AI models for your needs.</p>
++                <p>Select your purpose above and click "Compare AI Tools" to find the best AI models for your needs.</p>
+               </div>
+             )}
+           </div>
+         )}
+ 
+         {/* Chatbots — always visible, mirroring legacy */}
+-        <ChatbotPanel
+-          activeView={activeView}
+-          cloudContext={{
+-            category,
+-            serviceType,
+-            priority,
+-            resources,
+-            services: servicesList
+-          }}
+-          aiToolsContext={{
+-            query: lastQuery,
+-            tools: aiResults?.tools || []
+-          }}
+-        />
++        <div id="chatbot-section" className="input-section" style={{ marginTop: '2rem' }}>
++          <div className="section-header">
++            <h2><i className="fas fa-comments" /> Chatbots (Cloud vs AI Tools)</h2>
++            <p>Ask for deeper reasoning. Both chat modes use your current selections/results.</p>
++          </div>
++          <ChatbotPanel
++            activeView={activeView}
++            cloudContext={{
++              category,
++              serviceType,
++              priority,
++              region,
++              resources,
++              services: filteredServices
++            }}
++            aiToolsContext={{
++              query: lastQuery,
++              tools: aiResults?.tools || []
++            }}
++          />
++        </div>
+       </main>
++
++      <Footer />
+     </div>
+   )
+ }
+diff --git a/cloudcompare-frontend/src/utils/report.js b/cloudcompare-frontend/src/utils/report.js
+new file mode 100644
+index 0000000..e08a3c5
+--- /dev/null
++++ b/cloudcompare-frontend/src/utils/report.js
+@@ -0,0 +1,69 @@
++// Client-side report helpers (PDF / CSV), mirroring Render's
++// src/main/resources/static/script.js exportToPDF()/exportToCSV().
++// pdf is loaded via <script> from html2pdf; we import jsPDF only if present.
++
++function serviceUrlMap(platform) {
++  const map = {
++    AWS: 'https://aws.amazon.com/',
++    GCP: 'https://cloud.google.com/',
++    Azure: 'https://azure.microsoft.com/',
++    OCI: 'https://www.oracle.com/cloud/',
++    Alibaba: 'https://www.alibabacloud.com/'
++  }
++  return map[platform] || 'https://www.google.com/search?q=' + encodeURIComponent(platform + ' cloud')
++}
++
++export function serviceUrl(platform, serviceName) {
++  return serviceUrlMap(platform)
++}
++
++export function exportToCSV(services) {
++  const header = 'Platform,Service,Cost,Performance,Score\n'
++  const rows = services
++    .map((s) => `${s.platform},${s.service_name},${Number(s.cost ?? s.cost_per_month ?? 0)},${Number(s.performance_score ?? 0)},${Number(s.score ?? 0)}`)
++    .join('\n')
++  const blob = new Blob([header + rows], { type: 'text/csv' })
++  const url = window.URL.createObjectURL(blob)
++  const a = document.createElement('a')
++  a.setAttribute('href', url)
++  a.setAttribute('download', 'CloudCompare_Architect_Report.csv')
++  a.click()
++  window.URL.revokeObjectURL(url)
++}
++
++export function exportToPDF(services, categoryLabel) {
++  if (typeof window.html2pdf === 'undefined') {
++    alert('PDF library is still loading. Please try again in a moment.')
++    return
++  }
++
++  const title = categoryLabel ? `${categoryLabel} Comparison Report` : 'CloudCompare Architect Report'
++  const cols = ['Rank', 'Platform', 'Service', 'CPU', 'RAM', 'Storage', 'Cost/Mo', 'Perf', 'Score']
++  const rows = services
++    .map((s, i) => [i + 1, s.platform, s.service_name, s.cpu, s.ram, s.storage, '$' + Number(s.cost ?? s.cost_per_month ?? 0).toFixed(2), s.performance_score, Number(s.score ?? 0).toFixed(1)])
++    .map((r) => r.map((c) => `&nbsp;${c}`).join('</td><td>'))
++
++  const el = document.createElement('div')
++  el.style.cssText = 'background:#0f172a;color:#e2e8f0;font-family:Inter,sans-serif;padding:24px;width:100%'
++  el.innerHTML = `
++    <h2 style="color:#fbbf24;margin:0 0 4px">${title}</h2>
++    <p style="color:#94a3b8;margin:0 0 16px">Generated ${new Date().toLocaleString()}</p>
++    <table style="border-collapse:collapse;width:100%;font-size:11px">
++      <thead>
++        <tr>${cols.map((c) => `<th style="border:1px solid #1e293b;background:#0b1120;padding:6px;text-align:left;color:#94a3b8">${c}</th>`).join('')}</tr>
++      </thead>
++      <tbody>
++        ${rows.map((r) => `<tr>${r}</tr>`).join('')}
++      </tbody>
++    </table>`
++
++  const opt = {
++    margin: 10,
++    filename: `CloudCompare_Architect_Report_${new Date().toISOString().split('T')[0]}.pdf`,
++    image: { type: 'jpeg', quality: 0.98 },
++    html2canvas: { scale: 2, useCORS: true, logging: false },
++    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
++  }
++
++  window.html2pdf().set(opt).from(el).save()
++}

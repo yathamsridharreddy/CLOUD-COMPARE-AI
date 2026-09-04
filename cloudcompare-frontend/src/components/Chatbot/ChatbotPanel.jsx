@@ -67,12 +67,7 @@ export default function ChatbotPanel({ activeView, cloudContext, aiToolsContext 
   }
 
   return (
-    <section className="input-section" style={{ marginTop: '2rem' }}>
-      <div className="section-header">
-        <h2><i className="fas fa-comments" /> CloudCompare Assistant</h2>
-        <p>Get chatbot guidance using your current cloud or AI comparison context.</p>
-      </div>
-
+    <section className="input-section">
       <div className="input-row" style={{ gridTemplateColumns: '1fr', gap: '1rem' }}>
         <div className="input-group">
           <label><i className="fas fa-chess-knight" /> Choose Chat Mode</label>
@@ -133,6 +128,7 @@ export default function ChatbotPanel({ activeView, cloudContext, aiToolsContext 
             style={{ display: 'flex', gap: '0.75rem', borderTop: '1px solid var(--glass-border)', padding: '0.75rem' }}
           >
             <input
+              id="chat-question-input"
               type="text"
               value={question}
               onChange={(event) => setQuestion(event.target.value)}

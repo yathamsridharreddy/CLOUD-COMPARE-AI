@@ -1,15 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from '../components/Layout/Header.jsx'
+import Footer from '../components/Layout/Footer.jsx'
 import CategorySelector from '../components/Cloud/CategorySelector.jsx'
 import ResourceInputs from '../components/Cloud/ResourceInputs.jsx'
 import ServiceTypeSelect from '../components/Cloud/ServiceTypeSelect.jsx'
 import ProviderCard from '../components/Cloud/ProviderCard.jsx'
+import ProviderFilterBar from '../components/Cloud/ProviderFilterBar.jsx'
+import ProviderStatsGrid from '../components/Cloud/ProviderStatsGrid.jsx'
+import ComparisonTable from '../components/Cloud/ComparisonTable.jsx'
 import ComparisonCharts from '../components/Cloud/ComparisonCharts.jsx'
-import NlpQueryInput from '../components/AI/NlpQueryInput.jsx'
+import ExecutiveSummary from '../components/Cloud/ExecutiveSummary.jsx'
+import AiPurposeInput from '../components/AI/AiPurposeInput.jsx'
 import AiResultsGrid from '../components/AI/AiResultsGrid.jsx'
 import ChatbotPanel from '../components/Chatbot/ChatbotPanel.jsx'
 import { useCompare } from '../hooks/useCompare.js'
-import { aiApi } from '../api/client.js'
+import { aiApi, cloudApi } from '../api/client.js'
 
 export default function DashboardPage() {
   const [activeView, setActiveView] = useState('cloud')
@@ -17,37 +22,54 @@ export default function DashboardPage() {
   const [category, setCategory] = useState('compute')
   const [serviceType, setServiceType] = useState('all')
   const [priority, setPriority] = useState('balanced')
+  const [region, setRegion] = useState('all')
+  const [regions, setRegions] = useState([])
   const [resources, setResources] = useState({ cpu: 2, ram: 4, storage: 100, hours: 730 })
-  const { results: cloudResults, loading: cloudLoading, error: cloudError, compare } = useCompare()
+  const [providerFilter, setProviderFilter] = useState('all')
+
+  const { results: cloudResults, loading: cloudLoading, error: cloudError, compare, clearResults } = useCompare()
 
   const [aiResults, setAiResults] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState(null)
   const [lastQuery, setLastQuery] = useState('')
 
+  const servicesList = cloudResults?.services || (Array.isArray(cloudResults) ? cloudResults : [])
+  const filteredServices = providerFilter === 'all'
+    ? servicesList
+    : servicesList.filter((s) => s.platform === providerFilter)
+
+  // Load regions once
+  useEffect(() => {
+    cloudApi.getRegions()
+      .then((res) => setRegions(res.data?.data || []))
+      .catch(() => setRegions([]))
+  }, [])
+
   const handleCompare = () => {
     compare({
       category,
       serviceType,
       priority,
+      region,
       cpu: resources.cpu,
       ram: resources.ram,
       storage: resources.storage,
-      hours: resources.hours,
-      region: 'all'
+      hours: resources.hours
     })
   }
 
-  const handleNlpQuery = async (query) => {
+  const handleAiSubmit = async ({ purpose, queryText }) => {
     setAiLoading(true)
     setAiError(null)
-    setLastQuery(query)
+    const effectiveQuery = queryText || purpose
+    setLastQuery(effectiveQuery)
     try {
       let res
       try {
-        res = await aiApi.nlpCompare(query)
+        res = await aiApi.compareTools(effectiveQuery)
       } catch {
-        res = await aiApi.compareTools(query)
+        res = await aiApi.nlpCompare(effectiveQuery)
       }
       const payload = res.data?.data || res.data || null
       setAiResults(payload)
@@ -58,7 +80,18 @@ export default function DashboardPage() {
     }
   }
 
-  const servicesList = cloudResults?.services || (Array.isArray(cloudResults) ? cloudResults : [])
+  const handleAskArchitect = () => {
+    // Switch to cloud view and scroll to the chatbot with a prepared question.
+    setActiveView('cloud')
+    setTimeout(() => {
+      const el = document.getElementById('chat-question-input')
+      if (el) {
+        el.value = 'Using my current comparison results, explain the best deployment choice, the main trade-off, and the next deployment step.'
+        el.focus()
+      }
+      document.getElementById('chatbot-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+  }
 
   return (
     <div className="app-container">
@@ -92,41 +125,60 @@ export default function DashboardPage() {
                 <p>Select your cloud service needs and we'll find the best option</p>
               </div>
 
-              <CategorySelector selected={category} onChange={(c) => { setCategory(c); setServiceType('all') }} />
+              <div className="input-grid">
+                <CategorySelector selected={category} onChange={(c) => { setCategory(c); setServiceType('all') }} />
 
-              <ResourceInputs values={resources} onChange={setResources} />
+                <ResourceInputs values={resources} onChange={setResources} />
 
-              <div className="input-row">
-                <ServiceTypeSelect category={category} value={serviceType} onChange={setServiceType} />
-
-                <div className="input-group">
-                  <label><i className="fas fa-sort-amount-up" /> Priority</label>
-                  <div className="premium-select-wrapper">
-                    <select
-                      id="priority-select"
-                      value={priority}
-                      onChange={(e) => setPriority(e.target.value)}
-                      className="premium-select"
-                    >
-                      <option value="balanced">Balanced (Cost + Performance)</option>
-                      <option value="cost">Cost Optimization</option>
-                      <option value="performance">Maximum Performance</option>
+                <div className="input-row">
+                  <div className="input-group">
+                    <label><i className="fas fa-globe" /> Region</label>
+                    <select id="region" value={region} onChange={(e) => setRegion(e.target.value)}>
+                      <option value="all">All Regions</option>
+                      {regions.map((r) => (
+                        <option key={r.value} value={r.value}>{r.label}</option>
+                      ))}
                     </select>
-                    <i className="fas fa-chevron-down select-arrow" />
                   </div>
-                </div>
 
-                <div className="input-group action-group">
-                  <button className="compare-btn" id="compare-btn" onClick={handleCompare} disabled={cloudLoading}>
-                    {cloudLoading ? (
-                      <div className="pulse-loader"><span /><span /><span /></div>
-                    ) : (
-                      <><i className="fas fa-rocket" /> Compare Services</>
-                    )}
-                  </button>
+                  <ServiceTypeSelect category={category} value={serviceType} onChange={setServiceType} />
+
+                  <div className="input-group">
+                    <label><i className="fas fa-sort-amount-up" /> Priority</label>
+                    <div className="premium-select-wrapper">
+                      <select
+                        id="priority-select"
+                        value={priority}
+                        onChange={(e) => setPriority(e.target.value)}
+                        className="premium-select"
+                      >
+                        <option value="balanced">Balanced (Cost + Performance)</option>
+                        <option value="cost">Cost Optimization</option>
+                        <option value="performance">Maximum Performance</option>
+                      </select>
+                      <i className="fas fa-chevron-down select-arrow" />
+                    </div>
+                  </div>
+
+                  <div className="input-group action-group">
+                    <button className="compare-btn" id="compare-btn" onClick={handleCompare} disabled={cloudLoading}>
+                      {cloudLoading ? (
+                        <div className="pulse-loader"><span /><span /><span /></div>
+                      ) : (
+                        <><i className="fas fa-rocket" /> Compare Services</>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </section>
+
+            {cloudLoading && (
+              <div className="loading-state">
+                <div className="loader"><i className="fas fa-cloud" /></div>
+                <p>Analyzing cloud services...</p>
+              </div>
+            )}
 
             {cloudError && (
               <div className="empty-state" style={{ marginBottom: '1.5rem' }}>
@@ -136,33 +188,33 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {cloudResults && (
+            {cloudResults && !cloudLoading && (
               <section className="results-section">
-                {cloudResults.recommendation && (
-                  <div className="executive-summary-card premium-card" style={{ marginBottom: '1.5rem' }}>
-                    <div className="summary-header">
-                      <div className="summary-title">
-                        <i className="fas fa-star" />
-                        <span>Top Recommendation</span>
-                      </div>
-                    </div>
-                    <div className="summary-content">{cloudResults.recommendation}</div>
-                  </div>
-                )}
+                <ExecutiveSummary
+                  services={filteredServices}
+                  categoryLabel={category}
+                  onAskArchitect={handleAskArchitect}
+                />
+
+                <ProviderFilterBar active={providerFilter} onChange={setProviderFilter} providers={servicesList.map((s) => s.platform)} />
 
                 <div className="recommendations-grid">
-                  {servicesList.map((svc, i) => (
-                    <ProviderCard key={svc.provider || i} service={svc} rank={i + 1} />
+                  {filteredServices.map((svc, i) => (
+                    <ProviderCard key={`${svc.platform}-${svc.service_name}-${i}`} service={svc} rank={i + 1} />
                   ))}
                 </div>
 
-                <ComparisonCharts services={servicesList} />
+                <ComparisonCharts services={filteredServices} />
+
+                <ProviderStatsGrid stats={cloudResults.providerStats} onFilter={setProviderFilter} />
+
+                <ComparisonTable services={filteredServices} />
               </section>
             )}
 
-            {!cloudResults && !cloudError && (
+            {!cloudResults && !cloudError && !cloudLoading && (
               <div className="empty-state">
-                <div className="empty-icon"><i className="fas fa-server" /></div>
+                <div className="empty-icon"><i className="fas fa-cloud-upload-alt" /></div>
                 <h3>Ready to Compare</h3>
                 <p>Configure your requirements above and click "Compare Services" to find the best cloud service for your needs.</p>
                 <div className="features-grid">
@@ -181,10 +233,17 @@ export default function DashboardPage() {
             <section className="input-section">
               <div className="section-header">
                 <h2><i className="fas fa-brain" /> AI Tool Recommendation</h2>
-                <p>Ask in plain English — our NLP engine will find the best AI tools for your needs</p>
+                <p>Select your purpose and we'll find the best AI tools for the job</p>
               </div>
-              <NlpQueryInput onSubmit={handleNlpQuery} loading={aiLoading} />
+              <AiPurposeInput onSubmit={handleAiSubmit} loading={aiLoading} />
             </section>
+
+            {aiLoading && (
+              <div className="loading-state">
+                <div className="loader"><i className="fas fa-robot" /></div>
+                <p>Analyzing AI tools...</p>
+              </div>
+            )}
 
             {aiError && (
               <div className="empty-state">
@@ -195,32 +254,41 @@ export default function DashboardPage() {
             )}
 
             {aiResults && <AiResultsGrid results={aiResults} query={lastQuery} />}
-            {!aiResults && !aiError && (
+            {!aiResults && !aiError && !aiLoading && (
               <div className="empty-state">
                 <div className="empty-icon"><i className="fas fa-robot" /></div>
                 <h3>Ready to Compare AI</h3>
-                <p>Enter a query above to find the best AI models for your needs.</p>
+                <p>Select your purpose above and click "Compare AI Tools" to find the best AI models for your needs.</p>
               </div>
             )}
           </div>
         )}
 
         {/* Chatbots — always visible, mirroring legacy */}
-        <ChatbotPanel
-          activeView={activeView}
-          cloudContext={{
-            category,
-            serviceType,
-            priority,
-            resources,
-            services: servicesList
-          }}
-          aiToolsContext={{
-            query: lastQuery,
-            tools: aiResults?.tools || []
-          }}
-        />
+        <div id="chatbot-section" className="input-section" style={{ marginTop: '2rem' }}>
+          <div className="section-header">
+            <h2><i className="fas fa-comments" /> Chatbots (Cloud vs AI Tools)</h2>
+            <p>Ask for deeper reasoning. Both chat modes use your current selections/results.</p>
+          </div>
+          <ChatbotPanel
+            activeView={activeView}
+            cloudContext={{
+              category,
+              serviceType,
+              priority,
+              region,
+              resources,
+              services: filteredServices
+            }}
+            aiToolsContext={{
+              query: lastQuery,
+              tools: aiResults?.tools || []
+            }}
+          />
+        </div>
       </main>
+
+      <Footer />
     </div>
   )
 }

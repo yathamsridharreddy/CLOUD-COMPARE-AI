@@ -1587,3 +1587,56 @@ body.light-theme .provider-chip.active {
   gap: 6px;
 }
 .login-link:hover { background: rgba(0, 212, 170, 0.28); color: #fff; }
+
+/* ── React feature-port additions (charts grid, cards, results header) ────── */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+.chart-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 1.5rem;
+}
+.chart-card h3 {
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+.chart-card h3 i { color: var(--primary); }
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.results-header h2 {
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.results-header h2 i { color: var(--primary); }
+.results-header .header-actions { display: flex; gap: 8px; }
+.h-52 { height: 200px; }
+.h-64 { height: 260px; }
+.visit-service-btn {
+  margin-top: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid;
+  font-size: 0.8rem;
+  text-decoration: none;
+  transition: all 0.3s;
+}
