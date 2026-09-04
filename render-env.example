@@ -1,0 +1,10 @@
+JWT_SECRET=change-me-to-a-long-random-jwt-secret
+GROK_API_KEYS=
+CORS_ALLOWED_ORIGINS=https://cloudcompare-ai.vercel.app,http://localhost:5173,http://localhost:3000
+# To persist data instead of in-memory H2, set all of these:
+# SPRING_DATASOURCE_URL=jdbc:mysql://<host>:3306/cloudcompare?useSSL=true&serverTimezone=UTC
+# SPRING_DATASOURCE_USERNAME=<user>
+# SPRING_DATASOURCE_PASSWORD=<password>
+# SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+# SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.MySQLDialect
+# SPRING_JPA_HIBERNATE_DDL_AUTO=update
