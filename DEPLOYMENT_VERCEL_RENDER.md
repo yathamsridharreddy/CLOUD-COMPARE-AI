@@ -1,0 +1,141 @@
+# Deploy CloudCompare AI — Vercel (frontend) + Render (backend)
+
+This guide gets **CloudCompare AI** running with:
+
+- **Frontend (React + Vite)** → hosted on **Vercel**
+- **Backend (Spring Boot)** → hosted on **Render** (Docker web service)
+
+The existing `.env`/AWS/Terraform paths are unrelated to this setup. We deploy
+the frontend at the site root (no `/app/` sub-path). In production Vercel
+**proxies `/api/*` to the Render backend** via `vercel.json` rewrites, so the
+React app calls its own origin — exactly like the legacy static dashboard — and
+needs no `VITE_API_BASE` env var and no CORS.
+
+---
+
+## Prerequisites
+
+- A GitHub repo with this project pushed to a branch you can deploy from.
+- A **Vercel** account and a **Render** account (there are free tiers for both).
+- A **Groq** API key (optional). Without it the backend falls back to mock data.
+
+---
+
+## 1. Deploy the backend to Render
+
+Render has a Blueprint (`render.yaml`) that provisions the web service from the
+repo. It builds from `Dockerfile.render` (multi-stage Maven → JRE).
+
+### Steps
+
+1. Push the repo (including the new `render.yaml`, `Dockerfile.render`, and
+   `.dockerignore`) to GitHub.
+2. In Render: **New → Blueprint → Connect a repository** → pick this repo.
+   Render reads `render.yaml`.
+3. When prompted, fill in the secrets (Render marks them `sync: false` so it
+   won't hardcode them):
+
+   | Variable | Value |
+   |---|---|
+   | `JWT_SECRET` | a long random string (64+ chars) |
+   | `GROK_API_KEYS` | your Groq API key (optional) |
+   | `CORS_ALLOWED_ORIGINS` | your **Vercel** origin, e.g. `https://cloudcompare-ai.vercel.app` |
+
+4. Deploy. Render injects `PORT`; the app binds to it via
+   `server.port=${PORT:8080}` in `application.properties`.
+
+> **Default database:** the app boots on in-memory **H2**, so no DB is required
+> on the free tier. Data resets on restart. To persist credentials, attach a
+> managed MySQL/Postgres and set the `SPRING_DATASOURCE_*` / `DB_*` variables
+> listed in `render-env.example`.
+
+5. After deploy, note the backend URL, e.g.
+   `https://cloudcompare-ai-api.onrender.com`.
+
+---
+
+## 2. Deploy the frontend to Vercel
+
+The frontend lives in `cloudcompare-frontend/`. Configure Vercel to use that
+folder as the **Root Directory**.
+
+### Steps
+
+1. In Vercel: **Add New Project → Import** your repo.
+2. Set **Root Directory** to `cloudcompare-frontend`.
+3. Vercel auto-detects Vite and uses `vercel.json` (proxy + SPA rewrites +
+   headers).
+4. **No env var is required.** The `vercel.json` rewrites proxy `/api/*` to the
+   Render backend server-side, so the browser calls the Vercel origin and Vercel
+   forwards it to Render. (Optionally you may set `VITE_API_BASE` to force direct
+   cross-origin calls, but you'd then also need CORS.)
+5. Deploy. The SPA routes (`/`, `/login`, `/signup`, `/dashboard`) and the
+   `/api/*` proxy are both handled by `vercel.json` rewrites.
+
+> **Why the proxy?** `src/api/client.js` resolves the API base, then prepends
+> `/api`. When `VITE_API_BASE` is unset it stays same-origin (relative `/api`),
+> which on Vercel is pointed at the Render backend by the rewrite. This mirrors
+> the static dashboard that Render serves (which calls `/api` relative to its
+> own host). Local dev still works because the Vite dev server proxies
+> `/api` → `localhost:8080`. The `/api/:path*` rewrites must appear **before** the
+> `/(.*)` SPA catch-all so API routes aren't swallowed by `index.html`.
+
+---
+
+## 3. CORS (only if you bypass the proxy)
+
+With the Vercel `/api` proxy in place the browser never talks to Render
+directly, so **CORS is not needed**. But if you set `VITE_API_BASE` to call
+Render cross-origin, the backend only allows origins listed in
+`CORS_ALLOWED_ORIGINS` — make sure the Vercel origin (or custom domain) is
+included, exactly as it appears in the address bar and **without** a trailing
+slash. This is already set in `render.yaml` to
+`https://cloud-compare-ai-flax.vercel.app`.
+
+---
+
+## 4. Smoke test
+
+After both are live:
+
+- Open the Vercel URL. The landing page should load.
+- **Sign up / Log in** → JWT issued → token stored in `localStorage`.
+- Go to **Dashboard** → **Compare Services** → should return ranked providers.
+- Try **AI Tools** / the **chatbots** (may show fallback guidance if `GROK_API_KEYS`
+  is unset).
+
+### Health check
+
+```bash
+curl -s https://cloudcompare-ai-api.onrender.com/api/test
+# {"status":"ok","message":"CloudCompare AI Engine is active."}
+```
+
+---
+
+## Notes / pitfalls
+
+- **No `/app/` prefix.** The original S3 deployment served under `/app/`. For
+  Vercel we changed `vite.config.js` (`base: '/'`), the `BrowserRouter` basename,
+  and removed the `/app/runtime-config.js` script so everything works at the site
+  root.
+- **CORS** is the most common failure. If the dashboard can't reach the backend,
+  check the browser's network tab for a CORS error and confirm
+  `CORS_ALLOWED_ORIGINS` matches the deployed origin.
+- **Render free tier** sleeps after ~15 min idle; the first request may take a
+  few seconds to spin up.
+- **Health check path:** Render polls `/api/test`, which is public and returns
+  `200 OK`. If this endpoint ever changes, update `healthCheckPath` in
+  `render.yaml`.
+
+## Local development (unchanged)
+
+```bash
+# Backend (needs Java 21 + Maven, or use Docker)
+./mvnw spring-boot:run
+
+# Frontend (Vite dev server proxies /api -> localhost:8080)
+cd cloudcompare-frontend
+npm install
+npm run dev
+```

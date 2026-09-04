@@ -1,10 +1,15 @@
 import axios from 'axios'
 
-// In production (Vercel) set the VITE_API_BASE env var to your Render backend URL,
-// e.g. https://cloudcompare-ai-backend.onrender.com  (no trailing slash).
-// We serve a runtime config on S3, so we honour it first if present.
-const runtimeConfig = window.__CLOUDCOMPARE_CONFIG__ || {}
-const API_BASE = (runtimeConfig.API_BASE || import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
+// ─── API base resolution ────────────────────────────────────────────────────
+// In production the app is served by Vercel, which proxies `/api/*` to the
+// Spring Boot backend on Render (see vercel.json rewrites). So we call the API
+// relative to our own origin — exactly like the legacy static dashboard served
+// by Render — which needs no CORS and no env var.
+//
+// You can still override this by setting `VITE_API_BASE` on Vercel to the full
+// backend URL (e.g. https://cloudcompare-ai-api.onrender.com, no trailing
+// slash); any trailing slash is stripped. If it's unset we stay same-origin.
+const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
 
 const api = axios.create({
   baseURL: `${API_BASE}/api`,

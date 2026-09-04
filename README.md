@@ -73,6 +73,32 @@ Production outputs:
 
 ---
 
+# Deployment on Vercel + Render (Frontend + Backend)
+
+Besides the AWS path above, you can host the app on free tiers:
+
+- **Frontend (React/Vite)** → **Vercel** (from `cloudcompare-frontend/`)
+- **Backend (Spring Boot)** → **Render** (Docker web service via `render.yaml`)
+
+The frontend builds at the site root (no `/app/` sub-path). In production
+Vercel **proxies `/api/*` to the Render backend** (see `vercel.json` rewrites),
+so the React app calls its own origin — no `VITE_API_BASE` and no CORS needed.
+The backend binds to Render's injected `PORT` and may still
+allow the Vercel origin via `CORS_ALLOWED_ORIGINS` for direct cross-origin use.
+
+See **[DEPLOYMENT_VERCEL_RENDER.md](DEPLOYMENT_VERCEL_RENDER.md)** for the full
+step-by-step guide, and `render.yaml` / `render-env.example` /
+`cloudcompare-frontend/.env.example` for the configuration files.
+
+| Variable | Where | Purpose |
+|---|---|---|
+| `VITE_API_BASE` | Vercel (frontend) | Optional. If set, call Render directly (cross-origin, needs CORS). Leave empty to use the Vercel `/api` proxy. |
+| `JWT_SECRET` | Render (backend) | JWT signing secret |
+| `GROK_API_KEYS` | Render (backend) | Groq API key (optional, mock fallback otherwise) |
+| `CORS_ALLOWED_ORIGINS` | Render (backend) | Vercel frontend origin allowed to call the API |
+
+---
+
 # Features
 
 - Multi-cloud infrastructure comparison
