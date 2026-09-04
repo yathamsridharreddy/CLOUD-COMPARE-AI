@@ -82,6 +82,12 @@
             <artifactId>mysql-connector-j</artifactId>
             <version>8.3.0</version>
         </dependency>
+        <!-- PostgreSQL Driver (Render managed database, for persistent auth) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <!-- H2 Database (for local development) -->
         <dependency>
             <groupId>com.h2database</groupId>

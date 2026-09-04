@@ -1,4 +1,15 @@
+# ─────────────────────────────────────────────────────────────────────────────
 # CloudCompare AI — Render Blueprint
+# Deploys the Spring Boot backend as a Docker web service on Render,
+# with a managed PostgreSQL database for persistent user credentials.
+#
+# How to use:
+#   1. Create a Render account and a new "Blueprint" pointing at this repo.
+#   2. Add the secrets below (JWT_SECRET, GROK_API_KEYS) — marked `sync: false`.
+#   3. Set CORS_ALLOWED_ORIGINS to your actual Vercel frontend URL (no slash).
+#   4. Deploy. Render creates the managed Postgres DB and injects DATABASE_URL.
+# ─────────────────────────────────────────────────────────────────────────────
+
 services:
   - type: web
     name: cloudcompare-ai-api
@@ -8,9 +19,39 @@ services:
     autoDeploy: true
     healthCheckPath: /api/test
     envVars:
+      # JWT signing secret — set this to a long random string.
       - key: JWT_SECRET
         sync: false
+      # Groq/LLaMA API key for AI recommendations (optional — falls back to mock).
       - key: GROK_API_KEYS
         sync: false
+      # CORS: allow the Vercel frontend to call the backend.
+      # This must be the EXACT Vercel origin (no trailing slash).
       - key: CORS_ALLOWED_ORIGINS
-        value: https://cloudcompare-ai.vercel.app
+        value: https://cloud-compare-ai-flax.vercel.app
+      # ── Persistent database (managed Postgres) ─────────────────────────────
+      # Render's free Postgres injects DATABASE_URL (postgres://user:pass@host/db).
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: cloudcompare-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: cloudcompare-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: cloudcompare-db
+          property: password
+      - key: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+        value: org.postgresql.Driver
+      - key: SPRING_JPA_DATABASE_PLATFORM
+        value: org.hibernate.dialect.PostgreSQLDialect
+      - key: SPRING_DATASOURCE_HIKARI_MAX_POOL_SIZE
+        value: "5"
+      - key: SPRING_DATASOURCE_HIKARI_MIN_IDLE
+        value: "1"
+
+databases:
+  - name: cloudcompare-db
+    plan: free

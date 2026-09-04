@@ -1,0 +1,111 @@
+diff --git a/pom.xml b/pom.xml
+index 06a0a0d..20ecccb 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -82,6 +82,12 @@
+             <artifactId>mysql-connector-j</artifactId>
+             <version>8.3.0</version>
+         </dependency>
++        <!-- PostgreSQL Driver (Render managed database, for persistent auth) -->
++        <dependency>
++            <groupId>org.postgresql</groupId>
++            <artifactId>postgresql</artifactId>
++            <scope>runtime</scope>
++        </dependency>
+         <!-- H2 Database (for local development) -->
+         <dependency>
+             <groupId>com.h2database</groupId>
+diff --git a/render.yaml b/render.yaml
+index dc32796..55c09c7 100644
+--- a/render.yaml
++++ b/render.yaml
+@@ -1,4 +1,15 @@
++# ─────────────────────────────────────────────────────────────────────────────
+ # CloudCompare AI — Render Blueprint
++# Deploys the Spring Boot backend as a Docker web service on Render,
++# with a managed PostgreSQL database for persistent user credentials.
++#
++# How to use:
++#   1. Create a Render account and a new "Blueprint" pointing at this repo.
++#   2. Add the secrets below (JWT_SECRET, GROK_API_KEYS) — marked `sync: false`.
++#   3. Set CORS_ALLOWED_ORIGINS to your actual Vercel frontend URL (no slash).
++#   4. Deploy. Render creates the managed Postgres DB and injects DATABASE_URL.
++# ─────────────────────────────────────────────────────────────────────────────
++
+ services:
+   - type: web
+     name: cloudcompare-ai-api
+@@ -8,9 +19,39 @@ services:
+     autoDeploy: true
+     healthCheckPath: /api/test
+     envVars:
++      # JWT signing secret — set this to a long random string.
+       - key: JWT_SECRET
+         sync: false
++      # Groq/LLaMA API key for AI recommendations (optional — falls back to mock).
+       - key: GROK_API_KEYS
+         sync: false
++      # CORS: allow the Vercel frontend to call the backend.
++      # This must be the EXACT Vercel origin (no trailing slash).
+       - key: CORS_ALLOWED_ORIGINS
+-        value: https://cloudcompare-ai.vercel.app
++        value: https://cloud-compare-ai-flax.vercel.app
++      # ── Persistent database (managed Postgres) ─────────────────────────────
++      # Render's free Postgres injects DATABASE_URL (postgres://user:pass@host/db).
++      - key: SPRING_DATASOURCE_URL
++        fromDatabase:
++          name: cloudcompare-db
++          property: connectionString
++      - key: SPRING_DATASOURCE_USERNAME
++        fromDatabase:
++          name: cloudcompare-db
++          property: user
++      - key: SPRING_DATASOURCE_PASSWORD
++        fromDatabase:
++          name: cloudcompare-db
++          property: password
++      - key: SPRING_DATASOURCE_DRIVER_CLASS_NAME
++        value: org.postgresql.Driver
++      - key: SPRING_JPA_DATABASE_PLATFORM
++        value: org.hibernate.dialect.PostgreSQLDialect
++      - key: SPRING_DATASOURCE_HIKARI_MAX_POOL_SIZE
++        value: "5"
++      - key: SPRING_DATASOURCE_HIKARI_MIN_IDLE
++        value: "1"
++
++databases:
++  - name: cloudcompare-db
++    plan: free
+diff --git a/src/main/resources/application.properties b/src/main/resources/application.properties
+index 365ebb0..27e5dc3 100644
+--- a/src/main/resources/application.properties
++++ b/src/main/resources/application.properties
+@@ -30,19 +30,24 @@ spring.web.resources.static-locations=classpath:/static/
+ 
+ # ✅ 3. Database Connection Pooling (HikariCP Tuning)
+ # Default to local/in-memory usage for easier dev startup.
+-# Use environment variables to switch back to MySQL:
+-#   DB_HOST, DB_NAME, DB_USER, DB_PASSWORD
++# In production Render injects SPRING_DATASOURCE_* (managed Postgres) so the
++# app persists users. The pool is sized conservatively to fit Render's free
++# 512 MB instance (env-overridable via Hikari vars).
+ spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:h2:mem:cloudcompare-ai;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+ spring.datasource.driverClassName=${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
+ spring.datasource.username=${SPRING_DATASOURCE_USERNAME:sa}
+ spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:}
+ 
+-spring.datasource.hikari.maximum-pool-size=50
+-spring.datasource.hikari.minimum-idle=10
++spring.datasource.hikari.maximum-pool-size=${SPRING_DATASOURCE_HIKARI_MAX_POOL_SIZE:5}
++spring.datasource.hikari.minimum-idle=${SPRING_DATASOURCE_HIKARI_MIN_IDLE:1}
+ spring.datasource.hikari.idle-timeout=300000
+ spring.datasource.hikari.connection-timeout=20000
+ spring.datasource.hikari.max-lifetime=1200000
+ 
++# CORS: comma-separated list of allowed origins.
++# Render env var CORS_ALLOWED_ORIGINS maps here (fallback for local dev).
++cors.allowed-origins=${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5000,http://localhost:5173}
++
+ # JPA / Hibernate
+ spring.jpa.hibernate.ddl-auto=${SPRING_JPA_HIBERNATE_DDL_AUTO:create}
+ spring.jpa.show-sql=false
