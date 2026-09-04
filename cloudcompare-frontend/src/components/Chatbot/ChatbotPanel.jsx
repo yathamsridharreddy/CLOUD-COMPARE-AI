@@ -75,7 +75,7 @@ export default function ChatbotPanel({
 
   return (
     <section className="glass-card p-5 mb-6">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
         <div>
           <h2 className="text-lg font-bold text-text-primary">
             <i className="fas fa-comments mr-2 text-gold-primary" />CloudCompare Assistant
@@ -105,9 +105,9 @@ export default function ChatbotPanel({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-5">
         <div className="rounded-xl border border-space-border bg-space-bg/40 overflow-hidden">
-          <div className="h-64 overflow-y-auto p-4 space-y-3">
+          <div className="h-56 overflow-y-auto p-4 space-y-3">
             {messages.map((message, index) => (
               <div
                 key={`${message.role}-${index}`}

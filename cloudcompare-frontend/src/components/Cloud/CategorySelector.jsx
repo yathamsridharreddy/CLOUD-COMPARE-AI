@@ -16,14 +16,14 @@ export default function CategorySelector({ selected, onChange }) {
           <button
             key={cat.key}
             onClick={() => onChange(cat.key)}
-            className={`flex flex-col items-center gap-2 px-4 py-3 rounded-xl border cursor-pointer transition-all duration-300
+            className={`flex flex-col items-center gap-2 px-4 py-4 rounded-xl border cursor-pointer transition-all duration-300
               ${selected === cat.key
                 ? 'bg-gold-primary/20 border-gold-primary text-gold-accent shadow-lg shadow-gold-primary/10'
                 : 'bg-space-bg/50 border-space-border text-text-secondary hover:border-gold-primary/40 hover:text-text-primary'
               }`}
           >
             <i className={`fas ${cat.icon} text-lg`} />
-            <span className="text-xs font-medium">{cat.label}</span>
+            <span className="text-sm font-medium">{cat.label}</span>
           </button>
         ))}
       </div>
