@@ -12,23 +12,19 @@ import { useCompare } from '../hooks/useCompare.js'
 import { aiApi } from '../api/client.js'
 
 export default function DashboardPage() {
-  // View toggle
   const [activeView, setActiveView] = useState('cloud')
 
-  // Cloud state
   const [category, setCategory] = useState('compute')
   const [serviceType, setServiceType] = useState('all')
   const [priority, setPriority] = useState('balanced')
   const [resources, setResources] = useState({ cpu: 2, ram: 4, storage: 100, hours: 730 })
   const { results: cloudResults, loading: cloudLoading, error: cloudError, compare } = useCompare()
 
-  // AI state
   const [aiResults, setAiResults] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState(null)
   const [lastQuery, setLastQuery] = useState('')
 
-  // ─── Cloud Compare ─────────────────────
   const handleCompare = () => {
     compare({
       category,
@@ -42,22 +38,17 @@ export default function DashboardPage() {
     })
   }
 
-  // ─── AI NLP Query ──────────────────────
   const handleNlpQuery = async (query) => {
     setAiLoading(true)
     setAiError(null)
     setLastQuery(query)
     try {
-      // Try NLP endpoint first, fallback to standard ai-compare
       let res
       try {
         res = await aiApi.nlpCompare(query)
       } catch {
         res = await aiApi.compareTools(query)
       }
-
-      // BUG 5 FIX: backend wraps in { data: { tools: [...], ... } }
-      // Extract the inner data payload
       const payload = res.data?.data || res.data || null
       setAiResults(payload)
     } catch (err) {
@@ -67,40 +58,154 @@ export default function DashboardPage() {
     }
   }
 
-  // Derive service list for chatbot context (handles both {services:[]} and array)
   const servicesList = cloudResults?.services || (Array.isArray(cloudResults) ? cloudResults : [])
 
   return (
-    <div className="relative z-10 min-h-screen">
+    <div className="app-container">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <main className="main-content">
         {/* View Toggle */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex rounded-xl border border-space-border overflow-hidden shadow-lg shadow-black/30">
+        <div className="view-toggle-container">
+          <div className="view-toggle">
             <button
+              className={`toggle-btn ${activeView === 'cloud' ? 'active' : ''}`}
               onClick={() => setActiveView('cloud')}
-              className={`px-6 py-2.5 text-sm font-medium transition-all cursor-pointer
-                ${activeView === 'cloud'
-                  ? 'bg-gold-primary/20 text-gold-accent border-r border-gold-primary/30'
-                  : 'bg-space-bg/50 text-text-secondary hover:text-text-primary border-r border-space-border'
-                }`}
             >
-              <i className="fas fa-server mr-2" />Cloud Services
+              <i className="fas fa-server" /> Cloud Services
             </button>
             <button
+              className={`toggle-btn ${activeView === 'ai' ? 'active' : ''}`}
               onClick={() => setActiveView('ai')}
-              className={`px-6 py-2.5 text-sm font-medium transition-all cursor-pointer
-                ${activeView === 'ai'
-                  ? 'bg-gold-primary/20 text-gold-accent'
-                  : 'bg-space-bg/50 text-text-secondary hover:text-text-primary'
-                }`}
             >
-              <i className="fas fa-robot mr-2" />AI Tools
+              <i className="fas fa-robot" /> AI Tools
             </button>
           </div>
         </div>
 
+        {/* ═══════════ CLOUD VIEW ═══════════ */}
+        {activeView === 'cloud' && (
+          <div>
+            <section className="input-section">
+              <div className="section-header">
+                <h2><i className="fas fa-sliders-h" /> Configure Your Requirements</h2>
+                <p>Select your cloud service needs and we'll find the best option</p>
+              </div>
+
+              <CategorySelector selected={category} onChange={(c) => { setCategory(c); setServiceType('all') }} />
+
+              <ResourceInputs values={resources} onChange={setResources} />
+
+              <div className="input-row">
+                <ServiceTypeSelect category={category} value={serviceType} onChange={setServiceType} />
+
+                <div className="input-group">
+                  <label><i className="fas fa-sort-amount-up" /> Priority</label>
+                  <div className="premium-select-wrapper">
+                    <select
+                      id="priority-select"
+                      value={priority}
+                      onChange={(e) => setPriority(e.target.value)}
+                      className="premium-select"
+                    >
+                      <option value="balanced">Balanced (Cost + Performance)</option>
+                      <option value="cost">Cost Optimization</option>
+                      <option value="performance">Maximum Performance</option>
+                    </select>
+                    <i className="fas fa-chevron-down select-arrow" />
+                  </div>
+                </div>
+
+                <div className="input-group action-group">
+                  <button className="compare-btn" id="compare-btn" onClick={handleCompare} disabled={cloudLoading}>
+                    {cloudLoading ? (
+                      <div className="pulse-loader"><span /><span /><span /></div>
+                    ) : (
+                      <><i className="fas fa-rocket" /> Compare Services</>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {cloudError && (
+              <div className="empty-state" style={{ marginBottom: '1.5rem' }}>
+                <div className="empty-icon"><i className="fas fa-exclamation-triangle" /></div>
+                <h3>Couldn't load results</h3>
+                <p>{cloudError}</p>
+              </div>
+            )}
+
+            {cloudResults && (
+              <section className="results-section">
+                {cloudResults.recommendation && (
+                  <div className="executive-summary-card premium-card" style={{ marginBottom: '1.5rem' }}>
+                    <div className="summary-header">
+                      <div className="summary-title">
+                        <i className="fas fa-star" />
+                        <span>Top Recommendation</span>
+                      </div>
+                    </div>
+                    <div className="summary-content">{cloudResults.recommendation}</div>
+                  </div>
+                )}
+
+                <div className="recommendations-grid">
+                  {servicesList.map((svc, i) => (
+                    <ProviderCard key={svc.provider || i} service={svc} rank={i + 1} />
+                  ))}
+                </div>
+
+                <ComparisonCharts services={servicesList} />
+              </section>
+            )}
+
+            {!cloudResults && !cloudError && (
+              <div className="empty-state">
+                <div className="empty-icon"><i className="fas fa-server" /></div>
+                <h3>Ready to Compare</h3>
+                <p>Configure your requirements above and click "Compare Services" to find the best cloud service for your needs.</p>
+                <div className="features-grid">
+                  <div className="feature-item"><i className="fas fa-check-circle" /><span>5 Cloud Providers</span></div>
+                  <div className="feature-item"><i className="fas fa-check-circle" /><span>Smart Ranking</span></div>
+                  <div className="feature-item"><i className="fas fa-check-circle" /><span>Cost Estimation</span></div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══════════ AI VIEW ═══════════ */}
+        {activeView === 'ai' && (
+          <div>
+            <section className="input-section">
+              <div className="section-header">
+                <h2><i className="fas fa-brain" /> AI Tool Recommendation</h2>
+                <p>Ask in plain English — our NLP engine will find the best AI tools for your needs</p>
+              </div>
+              <NlpQueryInput onSubmit={handleNlpQuery} loading={aiLoading} />
+            </section>
+
+            {aiError && (
+              <div className="empty-state">
+                <div className="empty-icon"><i className="fas fa-exclamation-triangle" /></div>
+                <h3>Couldn't load results</h3>
+                <p>{aiError}</p>
+              </div>
+            )}
+
+            {aiResults && <AiResultsGrid results={aiResults} query={lastQuery} />}
+            {!aiResults && !aiError && (
+              <div className="empty-state">
+                <div className="empty-icon"><i className="fas fa-robot" /></div>
+                <h3>Ready to Compare AI</h3>
+                <p>Enter a query above to find the best AI models for your needs.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Chatbots — always visible, mirroring legacy */}
         <ChatbotPanel
           activeView={activeView}
           cloudContext={{
@@ -115,116 +220,6 @@ export default function DashboardPage() {
             tools: aiResults?.tools || []
           }}
         />
-
-        {/* ═══════════ CLOUD VIEW ═══════════ */}
-        {activeView === 'cloud' && (
-          <div>
-            <div className="glass-card p-6 mb-6">
-              <div className="mb-4">
-                <h2 className="text-lg font-bold text-text-primary">
-                  <i className="fas fa-sliders-h mr-2 text-gold-primary" />Configure Your Requirements
-                </h2>
-                <p className="text-sm text-text-secondary mt-1">Select your cloud service needs and we'll find the best option</p>
-              </div>
-
-              <CategorySelector selected={category} onChange={(c) => { setCategory(c); setServiceType('all') }} />
-              <ResourceInputs values={resources} onChange={setResources} />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                <ServiceTypeSelect category={category} value={serviceType} onChange={setServiceType} />
-
-                <div>
-                  <label className="block text-xs font-medium text-text-secondary mb-2">
-                    <i className="fas fa-sort-amount-up mr-1 text-gold-primary" />Priority
-                  </label>
-                  <select
-                    id="priority-select"
-                    value={priority}
-                    onChange={(e) => setPriority(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-space-bg/50 border border-space-border text-text-primary text-sm
-                               appearance-none cursor-pointer focus:border-gold-primary focus:outline-none focus:ring-2 focus:ring-gold-primary/20"
-                  >
-                    <option value="balanced">Balanced (Cost + Performance)</option>
-                    <option value="cost">Cost Optimization</option>
-                    <option value="performance">Maximum Performance</option>
-                  </select>
-                </div>
-
-                <div className="flex items-end">
-                  <button
-                    id="compare-btn"
-                    onClick={handleCompare}
-                    disabled={cloudLoading}
-                    className="btn-gold w-full flex items-center justify-center gap-2 !py-2.5"
-                  >
-                    {cloudLoading ? (
-                      <div className="pulse-loader"><span /><span /><span /></div>
-                    ) : (
-                      <><i className="fas fa-rocket" /> Compare Services</>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Cloud Error */}
-            {cloudError && (
-              <div className="mb-6 p-4 rounded-xl bg-accent-red/10 border border-accent-red/30 text-red-300 text-sm">
-                <i className="fas fa-exclamation-triangle mr-2" />{cloudError}
-              </div>
-            )}
-
-            {/* Cloud Results */}
-            {cloudResults && (
-              <div className="animate-fade-in-up">
-                {/* Recommendation banner */}
-                {cloudResults.recommendation && (
-                  <div className="mb-4 p-4 rounded-xl bg-gold-primary/10 border border-gold-primary/30 text-gold-accent text-sm">
-                    <i className="fas fa-star mr-2 text-gold-primary" />
-                    {cloudResults.recommendation}
-                  </div>
-                )}
-
-                {/* Provider Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
-                  {servicesList.map((svc, i) => (
-                    <ProviderCard key={svc.provider || i} service={svc} rank={i + 1} />
-                  ))}
-                </div>
-
-                {/* Charts */}
-                <ComparisonCharts services={servicesList} />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ═══════════ AI VIEW ═══════════ */}
-        {activeView === 'ai' && (
-          <div>
-            <div className="glass-card p-6 mb-6">
-              <div className="mb-4">
-                <h2 className="text-lg font-bold text-text-primary">
-                  <i className="fas fa-brain mr-2 text-gold-primary" />AI Tool Finder
-                </h2>
-                <p className="text-sm text-text-secondary mt-1">
-                  Ask in plain English — our NLP engine will find the best AI tools for your needs
-                </p>
-              </div>
-              <NlpQueryInput onSubmit={handleNlpQuery} loading={aiLoading} />
-            </div>
-
-            {/* AI Error */}
-            {aiError && (
-              <div className="mb-6 p-4 rounded-xl bg-accent-red/10 border border-accent-red/30 text-red-300 text-sm">
-                <i className="fas fa-exclamation-triangle mr-2" />{aiError}
-              </div>
-            )}
-
-            {/* AI Results — BUG 5 FIX: aiResults now has correct shape { tools, totalResults, ... } */}
-            {aiResults && <AiResultsGrid results={aiResults} query={lastQuery} />}
-          </div>
-        )}
       </main>
     </div>
   )

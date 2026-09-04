@@ -1,0 +1,2692 @@
+diff --git a/cloudcompare-frontend/src/api/client.js b/cloudcompare-frontend/src/api/client.js
+index 316c2aa..d3c2cc6 100644
+--- a/cloudcompare-frontend/src/api/client.js
++++ b/cloudcompare-frontend/src/api/client.js
+@@ -1,11 +1,55 @@
+ import axios from 'axios'
++
++// In production (Vercel) set the VITE_API_BASE env var to your Render backend URL,
++// e.g. https://cloudcompare-ai-backend.onrender.com  (no trailing slash).
++// We serve a runtime config on S3, so we honour it first if present.
+ const runtimeConfig = window.__CLOUDCOMPARE_CONFIG__ || {}
+ const API_BASE = (runtimeConfig.API_BASE || import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
+-const api = axios.create({ baseURL: `${API_BASE}/api`, headers: { 'Content-Type': 'application/json' }, timeout: 30000 })
+-api.interceptors.request.use((config) => { const token = localStorage.getItem('token'); if (token) config.headers.Authorization = `Bearer ${token}`; return config })
+-export const authApi = { login: (e,p) => api.post('/auth/login',{email:e,password:p}), signup: (n,e,p) => api.post('/auth/signup',{name:n,email:e,password:p}) }
+-export const cloudApi = { compare: (p) => api.post('/compare',p), getServiceTypes: (c) => api.get(`/service-types/${c}`), getRegions: () => api.get('/regions') }
+-export const aiApi = { compareTools: (purpose) => api.post('/ai-compare',{purpose}), nlpCompare: (query) => api.post('/nlp-compare',{query}) }
+-export const chatApi = { cloud: (q,c={}) => api.post('/chat/cloud',{question:q,cloudContext:c}), aiTools: (q,c={}) => api.post('/chat/ai-tools',{question:q,aiToolsContext:c}) }
+-export const healthApi = { check: () => api.get('/test') }
++
++const api = axios.create({
++  baseURL: `${API_BASE}/api`,
++  headers: { 'Content-Type': 'application/json' },
++  timeout: 30000
++})
++
++// Attach JWT token to every request if available
++api.interceptors.request.use((config) => {
++  const token = localStorage.getItem('token')
++  if (token) {
++    config.headers.Authorization = `Bearer ${token}`
++  }
++  return config
++})
++
++// ─── Auth ──────────────────────────────────────────────────────────────────
++export const authApi = {
++  login:  (email, password)         => api.post('/auth/login',  { email, password }),
++  signup: (name, email, password)   => api.post('/auth/signup', { name, email, password })
++}
++
++// ─── Cloud Compare ─────────────────────────────────────────────────────────
++export const cloudApi = {
++  compare:        (params)   => api.post('/compare', params),
++  getServiceTypes:(category) => api.get(`/service-types/${category}`),
++  getRegions:     ()         => api.get('/regions')
++}
++
++// ─── AI Tools ──────────────────────────────────────────────────────────────
++export const aiApi = {
++  compareTools: (purpose) => api.post('/ai-compare',   { purpose }),
++  nlpCompare:   (query)   => api.post('/nlp-compare',  { query })
++}
++
++// ─── Chatbot Assistants ────────────────────────────────────────────────────
++export const chatApi = {
++  cloud:   (question, cloudContext = {})    => api.post('/chat/cloud',    { question, cloudContext }),
++  aiTools: (question, aiToolsContext = {}) => api.post('/chat/ai-tools', { question, aiToolsContext })
++}
++
++// ─── Health ────────────────────────────────────────────────────────────────
++// Spring Boot serves GET /api/test; the Python mock also exposes /api/health.
++export const healthApi = {
++  check: () => api.get('/test')
++}
++
+ export default api
+diff --git a/cloudcompare-frontend/src/components/AI/AiResultsGrid.jsx b/cloudcompare-frontend/src/components/AI/AiResultsGrid.jsx
+index 8331a3a..3c4780d 100644
+--- a/cloudcompare-frontend/src/components/AI/AiResultsGrid.jsx
++++ b/cloudcompare-frontend/src/components/AI/AiResultsGrid.jsx
+@@ -4,30 +4,30 @@ export default function AiResultsGrid({ results, query }) {
+   if (!results || !results.tools || results.tools.length === 0) return null
+ 
+   return (
+-    <div className="animate-fade-in-up">
+-      {/* Summary Header */}
+-      <div className="glass-card p-5 mb-6">
+-        <div className="flex items-center gap-3 mb-2">
+-          <i className="fas fa-robot text-gold-primary text-lg" />
+-          <h3 className="font-bold text-text-primary">AI Analysis Results</h3>
++    <section className="results-section animate-fade-in-up">
++      <div className="executive-summary-card premium-card" style={{ marginBottom: '1.5rem' }}>
++        <div className="summary-header">
++          <div className="summary-title">
++            <i className="fas fa-robot" />
++            <span>AI Analysis Results</span>
++          </div>
++        </div>
++        <div className="summary-content">
++          Found <strong style={{ color: '#fbbf24' }}>{results.totalResults || results.tools.length}</strong> tools for:{" "}
++          <em style={{ color: '#22c55e' }}>"{results.purpose || results.originalQuery || query}"</em>
++          {(results.classifiedIntent || results.intent) && (
++            <div className="mt-1 text-xs" style={{ color: '#64748b' }}>
++              <i className="fas fa-tag mr-1" />Classified as: <span>{results.classifiedIntent || results.intent}</span>
++            </div>
++          )}
+         </div>
+-        <p className="text-sm text-text-secondary">
+-          Found <span className="text-gold-accent font-bold">{results.totalResults || results.tools.length}</span> tools
+-          for: <span className="text-accent-green italic">"{results.purpose || results.originalQuery || query}"</span>
+-        </p>
+-        {(results.classifiedIntent || results.intent) && (
+-          <p className="text-xs text-text-muted mt-1">
+-            <i className="fas fa-tag mr-1" />Classified as: <span className="text-gold-dim">{results.classifiedIntent || results.intent}</span>
+-          </p>
+-        )}
+       </div>
+ 
+-      {/* Results Grid */}
+-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
++      <div className="recommendations-grid">
+         {results.tools.map((tool, i) => (
+           <AiToolCard key={tool.tool_name || tool.toolName || i} tool={tool} index={i} />
+         ))}
+       </div>
+-    </div>
++    </section>
+   )
+ }
+diff --git a/cloudcompare-frontend/src/components/AI/AiToolCard.jsx b/cloudcompare-frontend/src/components/AI/AiToolCard.jsx
+index 6e802aa..dc72ddb 100644
+--- a/cloudcompare-frontend/src/components/AI/AiToolCard.jsx
++++ b/cloudcompare-frontend/src/components/AI/AiToolCard.jsx
+@@ -1,54 +1,44 @@
+ export default function AiToolCard({ tool, index }) {
+-  const scoreColor = tool.score >= 9 ? 'text-accent-green' : tool.score >= 8 ? 'text-gold-accent' : 'text-accent-blue'
++  const scoreColor = tool.score >= 9 ? '#22c55e' : tool.score >= 8 ? '#fbbf24' : '#3b82f6'
+ 
+   return (
+-    <div
+-      className="glass-card p-5 animate-fade-in-up"
+-      style={{ animationDelay: `${index * 120}ms` }}
+-    >
+-      {/* Header */}
+-      <div className="flex items-start justify-between mb-4">
+-        <div className="flex items-center gap-3">
+-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gold-primary/20 to-gold-accent/10 flex items-center justify-center">
+-            <i className="fas fa-robot text-gold-primary" />
+-          </div>
+-          <div>
+-            <h3 className="font-bold text-text-primary text-sm">{tool.tool_name || tool.toolName}</h3>
+-            <span className="text-xs text-text-muted">{tool.provider}</span>
+-          </div>
+-        </div>
+-        <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-gold-primary/15 text-gold-accent text-xs font-bold">
+-          #{tool.rank || index + 1}
+-        </div>
++    <div className="recommendation-card animate-fade-in-up">
++      <div className="recommendation-badge" style={{ background: 'rgba(138,43,226,0.15)', color: '#a78bfa', border: '1px solid rgba(138,43,226,0.3)' }}>
++        <i className="fas fa-robot" />
++        <span>#{tool.rank || index + 1} · {tool.provider}</span>
+       </div>
+ 
+-      {/* Score + Model */}
+-      <div className="grid grid-cols-2 gap-3 mb-4">
+-        <div className="p-2.5 rounded-lg bg-space-bg/50 text-center">
+-          <div className="text-xs text-text-muted mb-1">AI Score</div>
+-          <div className={`text-xl font-bold ${scoreColor}`}>{Number(tool.score).toFixed(1)}</div>
++      <div className="recommendation-content">
++        <div className="recommendation-platform">
++          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: 'rgba(138,43,226,0.15)', color: '#a78bfa' }}>
++            <i className="fas fa-robot" />
++          </div>
++          <h3>{tool.tool_name || tool.toolName}</h3>
+         </div>
+-        <div className="p-2.5 rounded-lg bg-space-bg/50 text-center">
+-          <div className="text-xs text-text-muted mb-1">Model</div>
+-          <div className="text-xs font-mono text-text-secondary truncate" title={tool.model_number || tool.modelNumber}>
+-            {tool.model_number || tool.modelNumber || '—'}
++
++        <div className="recommendation-stats">
++          <div className="stat-item">
++            <span className="stat-label">AI Score</span>
++            <span className="stat-value" style={{ color: scoreColor }}>{Number(tool.score).toFixed(1)}</span>
++          </div>
++          <div className="stat-item">
++            <span className="stat-label">Model</span>
++            <span className="stat-value" style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
++              {tool.model_number || tool.modelNumber || '—'}
++            </span>
+           </div>
+         </div>
+-      </div>
+ 
+-      {/* Pricing */}
+-      <div className="flex items-center gap-2 mb-3">
+-        <span className="text-xs px-2.5 py-1 rounded-md bg-accent-green/10 text-accent-green border border-accent-green/20">
++        <span className="text-xs px-2.5 py-1 rounded-md" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', alignSelf: 'flex-start' }}>
+           <i className="fas fa-tag mr-1" />{tool.pricing || 'Contact'}
+         </span>
+-      </div>
+ 
+-      {/* Description */}
+-      {tool.description && (
+-        <p className="text-xs text-text-secondary leading-relaxed line-clamp-2">
+-          {tool.description}
+-        </p>
+-      )}
++        {tool.description && (
++          <p className="text-xs leading-relaxed" style={{ color: '#94a3b8' }}>
++            {tool.description}
++          </p>
++        )}
++      </div>
+     </div>
+   )
+ }
+diff --git a/cloudcompare-frontend/src/components/Chatbot/ChatbotPanel.jsx b/cloudcompare-frontend/src/components/Chatbot/ChatbotPanel.jsx
+index 0997b38..eee25b0 100644
+--- a/cloudcompare-frontend/src/components/Chatbot/ChatbotPanel.jsx
++++ b/cloudcompare-frontend/src/components/Chatbot/ChatbotPanel.jsx
+@@ -14,11 +14,7 @@ const starterPrompts = {
+   ]
+ }
+ 
+-export default function ChatbotPanel({
+-  activeView,
+-  cloudContext,
+-  aiToolsContext
+-}) {
++export default function ChatbotPanel({ activeView, cloudContext, aiToolsContext }) {
+   const [mode, setMode] = useState(activeView === 'ai' ? 'ai' : 'cloud')
+   const [question, setQuestion] = useState('')
+   const [messages, setMessages] = useState([
+@@ -33,7 +29,6 @@ export default function ChatbotPanel({
+ 
+   const prompts = useMemo(() => starterPrompts[mode], [mode])
+ 
+-  // Auto-scroll to bottom when new messages appear
+   useEffect(() => {
+     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+   }, [messages, loading])
+@@ -52,8 +47,6 @@ export default function ChatbotPanel({
+         ? await chatApi.cloud(cleanQuestion, cloudContext)
+         : await chatApi.aiTools(cleanQuestion, aiToolsContext)
+ 
+-      // BUG 6 FIX: backend returns { response: "..." } not { reply: "..." }
+-      // Support both wrapped (data.data.response) and flat (data.response) shapes
+       const reply =
+         res.data?.data?.response ||
+         res.data?.data?.reply    ||
+@@ -74,105 +67,105 @@ export default function ChatbotPanel({
+   }
+ 
+   return (
+-    <section className="glass-card p-5 mb-6">
+-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
+-        <div>
+-          <h2 className="text-lg font-bold text-text-primary">
+-            <i className="fas fa-comments mr-2 text-gold-primary" />CloudCompare Assistant
+-          </h2>
+-          <p className="text-sm text-text-secondary mt-1">
+-            Get chatbot guidance using your current cloud or AI comparison context.
+-          </p>
+-        </div>
++    <section className="input-section" style={{ marginTop: '2rem' }}>
++      <div className="section-header">
++        <h2><i className="fas fa-comments" /> CloudCompare Assistant</h2>
++        <p>Get chatbot guidance using your current cloud or AI comparison context.</p>
++      </div>
+ 
+-        <div className="inline-flex rounded-xl border border-space-border overflow-hidden self-start lg:self-auto">
+-          <button
+-            type="button"
+-            onClick={() => setMode('cloud')}
+-            className={`px-4 py-2 text-xs sm:text-sm font-medium transition-all cursor-pointer border-r border-space-border
+-              ${mode === 'cloud' ? 'bg-gold-primary/20 text-gold-accent' : 'bg-space-bg/50 text-text-secondary hover:text-text-primary'}`}
+-          >
+-            <i className="fas fa-cloud mr-2" />Cloud Architect
+-          </button>
+-          <button
+-            type="button"
+-            onClick={() => setMode('ai')}
+-            className={`px-4 py-2 text-xs sm:text-sm font-medium transition-all cursor-pointer
+-              ${mode === 'ai' ? 'bg-gold-primary/20 text-gold-accent' : 'bg-space-bg/50 text-text-secondary hover:text-text-primary'}`}
+-          >
+-            <i className="fas fa-robot mr-2" />AI Tools
+-          </button>
++      <div className="input-row" style={{ gridTemplateColumns: '1fr', gap: '1rem' }}>
++        <div className="input-group">
++          <label><i className="fas fa-chess-knight" /> Choose Chat Mode</label>
++          <div className="category-buttons" style={{ justifyContent: 'flex-start' }}>
++            <button
++              type="button"
++              className={`category-btn ${mode === 'cloud' ? 'active' : ''}`}
++              onClick={() => setMode('cloud')}
++            >
++              <i className="fas fa-cloud" /><span>Cloud Architect</span>
++            </button>
++            <button
++              type="button"
++              className={`category-btn ${mode === 'ai' ? 'active' : ''}`}
++              onClick={() => setMode('ai')}
++            >
++              <i className="fas fa-robot" /><span>AI Tools</span>
++            </button>
++          </div>
+         </div>
+-      </div>
+ 
+-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-5">
+-        <div className="rounded-xl border border-space-border bg-space-bg/40 overflow-hidden">
+-          <div className="h-56 overflow-y-auto p-4 space-y-3">
++        <div
++          className="chat-window"
++          style={{
++            display: 'flex', flexDirection: 'column',
++            border: '1px solid var(--glass-border)', borderRadius: '14px',
++            overflow: 'hidden', background: 'rgba(15,23,42,0.6)'
++          }}
++        >
++          <div className="chat-messages" style={{ height: '220px', overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+             {messages.map((message, index) => (
+               <div
+                 key={`${message.role}-${index}`}
+-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
++                className={`chat-message ${message.role === 'user' ? 'user' : ''}`}
++                style={{
++                  alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
++                  maxWidth: '85%', whiteSpace: 'pre-line',
++                  padding: '0.7rem 1rem', borderRadius: '14px', fontSize: '0.85rem', lineHeight: 1.5,
++                  background: message.role === 'user' ? 'rgba(0,210,255,0.15)' : 'rgba(255,255,255,0.05)',
++                  color: message.role === 'user' ? '#00d2ff' : '#94a3b8',
++                  border: '1px solid var(--glass-border)'
++                }}
+               >
+-                <div
+-                  className={`max-w-[85%] whitespace-pre-line rounded-xl px-4 py-3 text-sm leading-relaxed border
+-                    ${message.role === 'user'
+-                      ? 'bg-gold-primary/20 text-gold-accent border-gold-primary/30'
+-                      : 'bg-space-bg/70 text-text-secondary border-space-border'}`}
+-                >
+-                  {message.text}
+-                </div>
++                {message.text}
+               </div>
+             ))}
+             {loading && (
+-              <div className="flex justify-start">
+-                <div className="rounded-xl px-4 py-3 bg-space-bg/70 border border-space-border">
+-                  <div className="pulse-loader"><span /><span /><span /></div>
+-                </div>
++              <div className="chat-message" style={{ alignSelf: 'flex-start' }}>
++                <div className="pulse-loader"><span /><span /><span /></div>
+               </div>
+             )}
+             <div ref={messagesEndRef} />
+           </div>
+ 
+           <form
+-            onSubmit={(event) => {
+-              event.preventDefault()
+-              sendQuestion()
+-            }}
+-            className="border-t border-space-border p-3 flex flex-col sm:flex-row gap-3"
++            onSubmit={(event) => { event.preventDefault(); sendQuestion() }}
++            className="chat-input-row"
++            style={{ display: 'flex', gap: '0.75rem', borderTop: '1px solid var(--glass-border)', padding: '0.75rem' }}
+           >
+             <input
+               type="text"
+               value={question}
+               onChange={(event) => setQuestion(event.target.value)}
+               placeholder={mode === 'cloud' ? 'Ask for a deployment plan or provider recommendation...' : 'Ask which AI tool fits your workflow...'}
+-              className="flex-1 px-4 py-3 rounded-xl bg-space-bg/70 border border-space-border text-text-primary text-sm outline-none focus:border-gold-primary focus:ring-2 focus:ring-gold-primary/20"
++              style={{ flex: 1, padding: '0.7rem 1rem', borderRadius: '10px', background: 'rgba(15,23,42,0.8)', border: '1px solid var(--glass-border)', color: '#fff', fontSize: '0.9rem', outline: 'none' }}
+             />
+-            <button
+-              type="submit"
+-              disabled={loading || !question.trim()}
+-              className="btn-gold flex items-center justify-center gap-2 !py-3 sm:w-36 disabled:opacity-60 disabled:cursor-not-allowed"
+-            >
+-              <i className="fas fa-paper-plane" />Ask
++            <button type="submit" className="compare-btn" disabled={loading || !question.trim()} style={{ whiteSpace: 'nowrap' }}>
++              <i className="fas fa-paper-plane" /> Ask
+             </button>
+           </form>
+         </div>
+ 
+-        <div className="space-y-2">
+-          <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Suggested questions</p>
+-          {prompts.map((prompt) => (
+-            <button
+-              type="button"
+-              key={prompt}
+-              onClick={() => sendQuestion(prompt)}
+-              disabled={loading}
+-              className="w-full text-left p-3 rounded-xl border border-space-border bg-space-bg/40 text-sm text-text-secondary hover:text-gold-accent hover:border-gold-primary/40 transition-all disabled:opacity-60"
+-            >
+-              <i className="fas fa-lightbulb mr-2 text-gold-primary" />{prompt}
+-            </button>
+-          ))}
++        <div className="input-group" style={{ marginTop: '0.5rem' }}>
++          <label style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', fontFamily: 'Inter', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
++            Suggested questions
++          </label>
++          <div className="category-buttons" style={{ justifyContent: 'flex-start', flexDirection: 'column', gap: '0.5rem' }}>
++            {prompts.map((prompt) => (
++              <button
++                type="button"
++                key={prompt}
++                className="category-btn"
++                onClick={() => sendQuestion(prompt)}
++                disabled={loading}
++                style={{ width: '100%', justifyContent: 'flex-start', textAlign: 'left' }}
++              >
++                <i className="fas fa-lightbulb" /><span>{prompt}</span>
++              </button>
++            ))}
++          </div>
+           {error && (
+-            <div className="p-3 rounded-xl bg-accent-red/10 border border-accent-red/30 text-red-300 text-sm">
+-              <i className="fas fa-exclamation-triangle mr-2" />{error}
++            <div className="empty-state" style={{ marginTop: '0.75rem', padding: '0.75rem' }}>
++              <p style={{ color: '#fca5a5', fontSize: '0.85rem' }}>{error}</p>
+             </div>
+           )}
+         </div>
+diff --git a/cloudcompare-frontend/src/components/Cloud/CategorySelector.jsx b/cloudcompare-frontend/src/components/Cloud/CategorySelector.jsx
+index cb747f9..87e62e4 100644
+--- a/cloudcompare-frontend/src/components/Cloud/CategorySelector.jsx
++++ b/cloudcompare-frontend/src/components/Cloud/CategorySelector.jsx
+@@ -7,23 +7,18 @@ const categories = [
+ 
+ export default function CategorySelector({ selected, onChange }) {
+   return (
+-    <div className="mb-6">
+-      <label className="block text-sm font-medium text-text-secondary mb-3">
+-        <i className="fas fa-tags mr-2 text-gold-primary" />Service Category
+-      </label>
+-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
++    <div className="input-group category-select">
++      <label><i className="fas fa-tags" /> Service Category</label>
++      <div className="category-buttons">
+         {categories.map((cat) => (
+           <button
+             key={cat.key}
++            type="button"
++            className={`category-btn ${selected === cat.key ? 'active' : ''}`}
+             onClick={() => onChange(cat.key)}
+-            className={`flex flex-col items-center gap-2 px-4 py-4 rounded-xl border cursor-pointer transition-all duration-300
+-              ${selected === cat.key
+-                ? 'bg-gold-primary/20 border-gold-primary text-gold-accent shadow-lg shadow-gold-primary/10'
+-                : 'bg-space-bg/50 border-space-border text-text-secondary hover:border-gold-primary/40 hover:text-text-primary'
+-              }`}
+           >
+-            <i className={`fas ${cat.icon} text-lg`} />
+-            <span className="text-sm font-medium">{cat.label}</span>
++            <i className={`fas ${cat.icon}`} />
++            <span>{cat.label}</span>
+           </button>
+         ))}
+       </div>
+diff --git a/cloudcompare-frontend/src/components/Cloud/ComparisonCharts.jsx b/cloudcompare-frontend/src/components/Cloud/ComparisonCharts.jsx
+index 98ed6f5..f8c6d18 100644
+--- a/cloudcompare-frontend/src/components/Cloud/ComparisonCharts.jsx
++++ b/cloudcompare-frontend/src/components/Cloud/ComparisonCharts.jsx
+@@ -59,29 +59,23 @@ export default function ComparisonCharts({ services }) {
+   const popData = buildChart(services, 'provider', 'popularity_score', 'Popularity')
+ 
+   return (
+-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+-      <div className="chart-box">
+-        <h3 className="text-sm font-semibold text-text-secondary mb-3">
+-          <i className="fas fa-dollar-sign mr-2 text-gold-primary" />Cost Comparison
+-        </h3>
++    <div className="charts-row" style={{ marginTop: '2rem' }}>
++      <div className="chart-container">
++        <h3><i className="fas fa-dollar-sign" /> Cost Comparison</h3>
+         <div className="h-52">
+           <Bar data={costData} options={chartOptions} />
+         </div>
+       </div>
+ 
+-      <div className="chart-box">
+-        <h3 className="text-sm font-semibold text-text-secondary mb-3">
+-          <i className="fas fa-tachometer-alt mr-2 text-accent-green" />Performance
+-        </h3>
++      <div className="chart-container">
++        <h3><i className="fas fa-tachometer-alt" /> Performance Score</h3>
+         <div className="h-52">
+           <Bar data={perfData} options={chartOptions} />
+         </div>
+       </div>
+ 
+-      <div className="chart-box">
+-        <h3 className="text-sm font-semibold text-text-secondary mb-3">
+-          <i className="fas fa-fire mr-2 text-accent-blue" />Popularity
+-        </h3>
++      <div className="chart-container">
++        <h3><i className="fas fa-fire" /> Popularity</h3>
+         <div className="h-52">
+           <Bar data={popData} options={chartOptions} />
+         </div>
+diff --git a/cloudcompare-frontend/src/components/Cloud/ProviderCard.jsx b/cloudcompare-frontend/src/components/Cloud/ProviderCard.jsx
+index a937054..cf0cda2 100644
+--- a/cloudcompare-frontend/src/components/Cloud/ProviderCard.jsx
++++ b/cloudcompare-frontend/src/components/Cloud/ProviderCard.jsx
+@@ -1,9 +1,9 @@
+ const providerColors = {
+-  AWS: { bg: 'rgba(255,153,0,0.12)', border: 'rgba(255,153,0,0.3)', text: '#FF9900', icon: 'fab fa-aws' },
+-  GCP: { bg: 'rgba(66,133,244,0.12)', border: 'rgba(66,133,244,0.3)', text: '#4285F4', icon: 'fab fa-google' },
+-  Azure: { bg: 'rgba(0,120,212,0.12)', border: 'rgba(0,120,212,0.3)', text: '#0078D4', icon: 'fab fa-microsoft' },
+-  OCI: { bg: 'rgba(248,0,0,0.12)', border: 'rgba(248,0,0,0.3)', text: '#F80000', icon: 'fas fa-cloud' },
+-  Alibaba: { bg: 'rgba(255,106,0,0.12)', border: 'rgba(255,106,0,0.3)', text: '#FF6A00', icon: 'fas fa-server' }
++  AWS: { bg: 'rgba(255,153,0,0.15)', color: '#FF9900', icon: 'fab fa-aws' },
++  GCP: { bg: 'rgba(66,133,244,0.15)', color: '#4285F4', icon: 'fab fa-google' },
++  Azure: { bg: 'rgba(0,120,212,0.15)', color: '#0078D4', icon: 'fab fa-microsoft' },
++  OCI: { bg: 'rgba(248,0,0,0.15)', color: '#F80000', icon: 'fas fa-cloud' },
++  Alibaba: { bg: 'rgba(255,106,0,0.15)', color: '#FF6A00', icon: 'fas fa-server' }
+ }
+ 
+ export default function ProviderCard({ service, rank }) {
+@@ -13,66 +13,61 @@ export default function ProviderCard({ service, rank }) {
+   const cost = service.estimated_monthly_cost || (service.price_per_hour * 730) || 0
+ 
+   return (
+-    <div
+-      className="glass-card p-5 animate-fade-in-up"
+-      style={{ animationDelay: `${rank * 100}ms`, borderColor: colors.border }}
+-    >
+-      {/* Rank Badge */}
+-      <div className="flex items-start justify-between mb-4">
+-        <div className="flex items-center gap-3">
++    <div className="recommendation-card animate-fade-in-up">
++      <div
++        className="recommendation-badge"
++        style={{ background: colors.bg, color: colors.color, border: `1px solid ${colors.color}` }}
++      >
++        <i className={colors.icon} />
++        <span>#{rank} · {provider}</span>
++      </div>
++
++      <div className="recommendation-content">
++        <div className="recommendation-platform">
+           <div
+             className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
+-            style={{ background: colors.bg, color: colors.text }}
++            style={{ background: colors.bg, color: colors.color }}
+           >
+             <i className={colors.icon} />
+           </div>
+-          <div>
+-            <h3 className="font-bold text-text-primary text-sm">{service.service_name}</h3>
+-            <span className="text-xs font-medium" style={{ color: colors.text }}>{provider}</span>
+-          </div>
++          <h3>{service.service_name}</h3>
+         </div>
+-        <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gold-primary/15 text-gold-accent text-xs font-bold">
+-          #{rank}
+-        </div>
+-      </div>
+ 
+-      {/* Scores */}
+-      <div className="grid grid-cols-2 gap-3 mb-4">
+-        <div className="p-2.5 rounded-lg bg-space-bg/50 text-center">
+-          <div className="text-xs text-text-muted mb-1">Performance</div>
+-          <div className="text-lg font-bold text-accent-green">{Number(score).toFixed(1)}</div>
++        <div className="recommendation-stats">
++          <div className="stat-item">
++            <span className="stat-label">Performance</span>
++            <span className="stat-value performance">{Number(score).toFixed(1)}</span>
++          </div>
++          <div className="stat-item">
++            <span className="stat-label">Monthly Cost</span>
++            <span className="stat-value cost">${Number(cost).toFixed(2)}</span>
++          </div>
+         </div>
+-        <div className="p-2.5 rounded-lg bg-space-bg/50 text-center">
+-          <div className="text-xs text-text-muted mb-1">Monthly Cost</div>
+-          <div className="text-lg font-bold text-gold-accent">${Number(cost).toFixed(2)}</div>
++
++        <div className="flex items-center gap-2 flex-wrap">
++          {service.cpu && (
++            <span className="text-xs px-2 py-1 rounded-md" style={{ background: colors.bg, color: colors.color }}>
++              <i className="fas fa-microchip mr-1" />{service.cpu} vCPU
++            </span>
++          )}
++          {service.ram && (
++            <span className="text-xs px-2 py-1 rounded-md" style={{ background: 'rgba(0,210,255,0.1)', color: '#00d2ff' }}>
++              <i className="fas fa-memory mr-1" />{service.ram} GB
++            </span>
++          )}
++          {service.region && (
++            <span className="text-xs px-2 py-1 rounded-md" style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}>
++              <i className="fas fa-globe mr-1" />{service.region}
++            </span>
++          )}
+         </div>
+-      </div>
+ 
+-      {/* Specs */}
+-      <div className="flex items-center gap-2 flex-wrap">
+-        {service.cpu && (
+-          <span className="text-xs px-2 py-1 rounded-md bg-space-bg/50 text-text-secondary">
+-            <i className="fas fa-microchip mr-1" />{service.cpu} vCPU
+-          </span>
+-        )}
+-        {service.ram && (
+-          <span className="text-xs px-2 py-1 rounded-md bg-space-bg/50 text-text-secondary">
+-            <i className="fas fa-memory mr-1" />{service.ram} GB
+-          </span>
+-        )}
+-        {service.region && (
+-          <span className="text-xs px-2 py-1 rounded-md bg-space-bg/50 text-text-secondary">
+-            <i className="fas fa-globe mr-1" />{service.region}
+-          </span>
++        {service.description && (
++          <p className="text-xs leading-relaxed" style={{ color: '#94a3b8' }}>
++            {service.description}
++          </p>
+         )}
+       </div>
+-
+-      {/* Description */}
+-      {service.description && (
+-        <p className="mt-3 text-xs text-text-secondary leading-relaxed line-clamp-2">
+-          {service.description}
+-        </p>
+-      )}
+     </div>
+   )
+ }
+diff --git a/cloudcompare-frontend/src/components/Cloud/ResourceInputs.jsx b/cloudcompare-frontend/src/components/Cloud/ResourceInputs.jsx
+index 0eabcf6..3190232 100644
+--- a/cloudcompare-frontend/src/components/Cloud/ResourceInputs.jsx
++++ b/cloudcompare-frontend/src/components/Cloud/ResourceInputs.jsx
+@@ -11,12 +11,10 @@ export default function ResourceInputs({ values, onChange }) {
+   }
+ 
+   return (
+-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
++    <div className="input-row">
+       {fields.map((f) => (
+-        <div key={f.id}>
+-          <label className="block text-xs font-medium text-text-secondary mb-2">
+-            <i className={`fas ${f.icon} mr-1 text-gold-primary`} />{f.label}
+-          </label>
++        <div className="input-group" key={f.id}>
++          <label><i className={`fas ${f.icon}`} /> {f.label}</label>
+           <input
+             id={`input-${f.id}`}
+             type="number"
+@@ -25,8 +23,6 @@ export default function ResourceInputs({ values, onChange }) {
+             placeholder={f.placeholder}
+             min={f.min}
+             max={f.max}
+-            className="w-full px-3 py-2.5 rounded-xl bg-space-bg/50 border border-space-border text-text-primary text-sm
+-                       placeholder:text-text-muted focus:border-gold-primary focus:outline-none focus:ring-2 focus:ring-gold-primary/20 transition-all"
+           />
+         </div>
+       ))}
+diff --git a/cloudcompare-frontend/src/components/Cloud/ServiceTypeSelect.jsx b/cloudcompare-frontend/src/components/Cloud/ServiceTypeSelect.jsx
+index 01789ca..55efe45 100644
+--- a/cloudcompare-frontend/src/components/Cloud/ServiceTypeSelect.jsx
++++ b/cloudcompare-frontend/src/components/Cloud/ServiceTypeSelect.jsx
+@@ -12,24 +12,21 @@ export default function ServiceTypeSelect({ category, value, onChange }) {
+   }, [category])
+ 
+   return (
+-    <div>
+-      <label className="block text-xs font-medium text-text-secondary mb-2">
+-        <i className="fas fa-filter mr-1 text-gold-primary" />Service Type
+-      </label>
+-      <div className="relative">
++    <div className="input-group full-width">
++      <label><i className="fas fa-filter" /> Specific Service Type</label>
++      <div className="premium-select-wrapper">
+         <select
+           id="service-type-select"
+           value={value}
+           onChange={(e) => onChange(e.target.value)}
+-          className="w-full px-3 py-2.5 rounded-xl bg-space-bg/50 border border-space-border text-text-primary text-sm
+-                     appearance-none cursor-pointer focus:border-gold-primary focus:outline-none focus:ring-2 focus:ring-gold-primary/20 transition-all"
++          className="premium-select"
+         >
+           <option value="all">All Types</option>
+           {types.map((t) => (
+             <option key={t.value} value={t.value}>{t.label}</option>
+           ))}
+         </select>
+-        <i className="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gold-dim text-xs pointer-events-none" />
++        <i className="fas fa-chevron-down select-arrow" />
+       </div>
+     </div>
+   )
+diff --git a/cloudcompare-frontend/src/components/Layout/Header.jsx b/cloudcompare-frontend/src/components/Layout/Header.jsx
+index c910421..0e7417f 100644
+--- a/cloudcompare-frontend/src/components/Layout/Header.jsx
++++ b/cloudcompare-frontend/src/components/Layout/Header.jsx
+@@ -1,40 +1,48 @@
+ import { Link, useNavigate } from 'react-router-dom'
+ import { useAuth } from '../../hooks/useAuth'
+ 
+-export default function Header() {
++/* ─── Dashboard header — mirrors the legacy dashboard.html header ─── */
++
++export default function Header({ services = 0, providers = 0 }) {
+   const { isAuthenticated, user, logout } = useAuth()
+   const navigate = useNavigate()
+ 
+   const handleLogout = () => { logout(); navigate('/') }
+ 
+   return (
+-    <header className="relative z-10 flex items-center justify-between gap-4 px-4 sm:px-8 py-3 bg-[rgba(13,17,23,0.85)] border-b border-[rgba(0,212,170,0.12)] backdrop-blur-xl">
+-      <Link
+-        to={isAuthenticated ? '/dashboard' : '/'}
+-        className="flex items-center gap-2.5 no-underline text-white font-bold text-lg whitespace-nowrap"
+-      >
+-        <i className="fas fa-cloud text-xl bg-gradient-to-r from-[#00d4aa] to-[#7c3aed] bg-clip-text text-transparent" />
+-        CloudCompare AI
+-      </Link>
+-
+-      <div className="flex items-center gap-3">
++    <header className="header">
++      <div className="logo">
++        <div className="logo-icon">
++          <i className="fas fa-cloud" />
++        </div>
++        <div className="logo-text">
++          <h1>CloudCompare AI</h1>
++          <span>Multi-Cloud Service Optimization</span>
++        </div>
++      </div>
++      <div className="header-actions">
++        <div className="stats-badge">
++          <i className="fas fa-server" />
++          <span>{services || 5} Service Types</span>
++        </div>
++        <div className="stats-badge">
++          <i className="fas fa-project-diagram" />
++          <span>{providers || 5} Providers</span>
++        </div>
+         {isAuthenticated ? (
+           <>
+-            <span className="hidden sm:inline text-[#94a3b8] text-sm">
++            <span className="hidden sm:inline text-[#94a3b8] text-sm mr-2">
+               <i className="fas fa-user-circle mr-1" />
+               {user?.name || user?.email}
+             </span>
+-            <button
+-              onClick={handleLogout}
+-              className="px-4 py-2 rounded-[10px] cursor-pointer bg-[rgba(239,68,68,0.12)] border border-[rgba(239,68,68,0.3)] text-[#fca5a5] text-sm font-semibold transition hover:bg-[rgba(239,68,68,0.2)] whitespace-nowrap"
+-            >
+-              <i className="fas fa-sign-out-alt mr-1.5" />Logout
++            <button className="logout-btn" onClick={handleLogout}>
++              <i className="fas fa-sign-out-alt" /> Logout
+             </button>
+           </>
+         ) : (
+           <>
+-            <Link to="/login" className="btn btn-outline !px-5 !py-2 !text-sm">Login</Link>
+-            <Link to="/signup" className="btn btn-primary !px-5 !py-2 !text-sm">Signup</Link>
++            <Link to="/login" className="login-link"><i className="fas fa-sign-in-alt" /> Login</Link>
++            <Link to="/signup" className="login-link"><i className="fas fa-user-plus" /> Signup</Link>
+           </>
+         )}
+       </div>
+diff --git a/cloudcompare-frontend/src/index.css b/cloudcompare-frontend/src/index.css
+index aab38c1..24d2abe 100644
+--- a/cloudcompare-frontend/src/index.css
++++ b/cloudcompare-frontend/src/index.css
+@@ -24,6 +24,8 @@
+   --color-azure: #0078D4;
+   --color-oci: #F80000;
+   --color-alibaba: #FF6A00;
++
++  /* Dashboard component tokens (used across DashboardPage, ProviderCard, etc.) */
+   --color-gold-primary: #f0b429;
+   --color-gold-accent: #ffd166;
+   --color-gold-dim: #b8860b;
+@@ -35,6 +37,7 @@
+   --color-accent-red: #ef4444;
+   --color-accent-green: #22c55e;
+   --color-accent-blue: #3b82f6;
++
+   --font-family-inter: 'Inter', sans-serif;
+   --font-family-mono: 'JetBrains Mono', monospace;
+ }
+diff --git a/cloudcompare-frontend/src/legacy-dashboard.css b/cloudcompare-frontend/src/legacy-dashboard.css
+new file mode 100644
+index 0000000..17fd36d
+--- /dev/null
++++ b/cloudcompare-frontend/src/legacy-dashboard.css
+@@ -0,0 +1,1589 @@
++/* ============================================================
++   CLOUDCOMPARE AI - PREMIUM DARK NAVY & TEAL THEME
++   ============================================================ */
++
++/* Dark Navy & Teal CSS Variables */
++:root {
++    --primary: #00d2ff;
++    --primary-dark: #00b894;
++    --secondary: #8a2be2;
++    --success: #22c55e;
++    --warning: #fbbf24;
++    --danger: #ef4444;
++    --dark-bg: #030014;
++    --dark-card: rgba(15, 23, 42, 0.85);
++    --dark-border: rgba(0, 210, 255, 0.12);
++    --glass-bg: rgba(15, 23, 42, 0.6);
++    --glass-border: rgba(0, 210, 255, 0.1);
++    --text-primary: #ffffff;
++    --text-secondary: #94a3b8;
++    --text-muted: #475569;
++    --gradient: linear-gradient(135deg, #00d2ff, #8a2be2);
++    --gradient-warm: linear-gradient(135deg, #00d2ff, #8a2be2);
++    --gradient-cool: linear-gradient(135deg, #8a2be2, #00d2ff);
++    --gradient-purple: linear-gradient(135deg, #8a2be2, #a78bfa);
++    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
++    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6);
++    --shadow-glow: 0 0 40px rgba(0, 210, 255, 0.1);
++    --gold-shimmer: linear-gradient(135deg, #00d2ff 0%, #8a2be2 40%, #00d2ff 60%, #059669 100%);
++}
++
++/* Reset & Base */
++* {
++    margin: 0;
++    padding: 0;
++    box-sizing: border-box;
++}
++
++body {
++    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
++    background-color: var(--dark-bg);
++    color: var(--text-primary);
++    line-height: 1.6;
++    min-height: 100vh;
++    overflow-x: hidden;
++    position: relative;
++}
++
++/* Dynamic Space Background */
++body::before {
++    content: ''; 
++    position: fixed; 
++    inset: 0; 
++    z-index: -2;
++    background: 
++        radial-gradient(ellipse at 80% 50%, rgba(138, 43, 226, 0.15) 0%, transparent 50%),
++        radial-gradient(ellipse at 20% 80%, rgba(0, 210, 255, 0.1) 0%, transparent 40%);
++}
++
++/* Stars effect */
++.stars { 
++    position: fixed; 
++    inset: 0; 
++    z-index: -1; 
++    background-image: radial-gradient(#ffffff 1px, transparent 1px); 
++    background-size: 50px 50px; 
++    opacity: 0.1; 
++}
++
++/* App Container */
++.app-container {
++    max-width: 1400px;
++    margin: 0 auto;
++    min-height: 100vh;
++    display: flex;
++    flex-direction: column;
++}
++
++/* Header - Glassmorphism */
++.header {
++    background: transparent;
++    backdrop-filter: blur(20px);
++    -webkit-backdrop-filter: blur(20px);
++    border-bottom: 1px solid rgba(255,255,255,0.05);
++    padding: 1.5rem 2rem;
++    display: flex;
++    justify-content: space-between;
++    align-items: center;
++    flex-wrap: wrap;
++    gap: 1rem;
++}
++
++.logo {
++    display: flex;
++    align-items: center;
++    gap: 12px;
++}
++
++.logo-icon {
++    width: 32px;
++    height: 32px;
++    background: var(--gradient);
++    border-radius: 50%;
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    font-size: 0.9rem;
++    color: white;
++}
++
++.logo-text h1 {
++    font-size: 1.5rem;
++    font-weight: 700;
++    color: var(--text-primary);
++}
++
++.logo-text span {
++    font-size: 0.85rem;
++    color: var(--text-secondary);
++}
++
++.header-actions {
++    display: flex;
++    gap: 12px;
++    flex-wrap: wrap;
++}
++
++.stats-badge {
++    background: var(--glass-bg);
++    backdrop-filter: blur(10px);
++    -webkit-backdrop-filter: blur(10px);
++    border: 1px solid var(--glass-border);
++    padding: 8px 16px;
++    border-radius: 12px;
++    font-size: 0.9rem;
++    color: var(--text-secondary);
++    display: flex;
++    align-items: center;
++    gap: 8px;
++    transition: all 0.3s ease;
++}
++
++.stats-badge:hover {
++    background: rgba(0, 212, 170, 0.1);
++    border-color: var(--primary);
++    transform: translateY(-2px);
++    box-shadow: 0 4px 20px rgba(0, 212, 170, 0.15);
++}
++
++.stats-badge i {
++    color: var(--primary);
++}
++
++/* Main Content */
++.main-content {
++    flex: 1;
++    padding: 2rem;
++}
++
++/* Input Section - Glassmorphism */
++.input-section {
++    background: var(--glass-bg);
++    backdrop-filter: blur(20px);
++    -webkit-backdrop-filter: blur(20px);
++    border: 1px solid var(--glass-border);
++    border-radius: 24px;
++    padding: 2rem;
++    margin-bottom: 2rem;
++    box-shadow: var(--shadow-glow), 0 8px 32px rgba(0, 0, 0, 0.5);
++}
++
++.section-header {
++    margin-bottom: 2rem;
++}
++
++.section-header h2 {
++    font-size: 1.5rem;
++    margin-bottom: 0.5rem;
++    display: flex;
++    align-items: center;
++    gap: 12px;
++}
++
++.section-header h2 i {
++    color: var(--primary);
++}
++
++.section-header p {
++    color: var(--text-secondary);
++}
++
++/* Input Grid */
++.input-grid {
++    display: flex;
++    flex-direction: column;
++    gap: 1.5rem;
++}
++
++/* Input Row */
++.input-row {
++    display: grid;
++    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
++    gap: 1rem;
++}
++
++/* Input Group */
++.input-group {
++    display: flex;
++    flex-direction: column;
++    gap: 0.5rem;
++}
++
++.input-group label {
++    font-weight: 500;
++    font-size: 0.9rem;
++    color: var(--text-secondary);
++    display: flex;
++    align-items: center;
++    gap: 8px;
++}
++
++.input-group label i {
++    color: var(--primary);
++    width: 16px;
++}
++
++.input-group input,
++.input-group select {
++    background: var(--glass-bg);
++    border: 1px solid var(--glass-border);
++    border-radius: 12px;
++    padding: 14px 16px;
++    color: var(--text-primary);
++    font-size: 1rem;
++    transition: all 0.3s;
++    width: 100%;
++}
++
++.input-group input:focus,
++.input-group select:focus {
++    outline: none;
++    border-color: var(--primary);
++    box-shadow: 0 0 0 4px rgba(0, 212, 170, 0.15), 0 0 30px rgba(0, 212, 170, 0.08);
++}
++
++.input-group input::placeholder {
++    color: var(--text-muted);
++}
++
++.input-group select option {
++    background: #0a1128;
++    color: #e2e8f0;
++    padding: 8px;
++}
++
++/* Category Buttons */
++.category-select {
++    margin-bottom: 0.5rem;
++}
++
++.service-buttons-container {
++    display: flex;
++    gap: 8px;
++    flex-wrap: wrap;
++    margin-top: 8px;
++}
++
++.service-type-btn {
++    background: var(--dark-bg);
++    border: 1px solid var(--dark-border);
++    border-radius: 8px;
++    padding: 8px 16px;
++    color: var(--text-secondary);
++    font-size: 0.9rem;
++    font-weight: 500;
++    cursor: pointer;
++    transition: all 0.3s;
++}
++
++.service-type-btn:hover {
++    border-color: var(--primary);
++    color: var(--text-primary);
++}
++
++.service-type-btn.active {
++    background: var(--gradient);
++    border-color: transparent;
++    color: white;
++}
++
++.category-buttons {
++    display: flex;
++    gap: 12px;
++    flex-wrap: wrap;
++}
++
++.category-btn {
++    background: var(--dark-bg);
++    border: 2px solid var(--dark-border);
++    border-radius: 12px;
++    padding: 16px 24px;
++    color: var(--text-secondary);
++    font-size: 1rem;
++    font-weight: 500;
++    cursor: pointer;
++    transition: all 0.3s;
++    display: flex;
++    align-items: center;
++    gap: 10px;
++    flex: 1;
++    min-width: 150px;
++    justify-content: center;
++}
++
++.category-btn:hover {
++    border-color: var(--primary);
++    color: var(--text-primary);
++}
++
++.category-btn.active {
++    background: var(--gradient);
++    border-color: transparent;
++    color: white;
++}
++
++.category-btn i {
++    font-size: 1.25rem;
++}
++
++/* Action Group */
++.action-group {
++    display: flex;
++    align-items: flex-end;
++}
++
++/* Compare Button */
++.compare-btn {
++    width: 100%;
++    padding: 14px 24px;
++    background: var(--gradient);
++    border: none;
++    border-radius: 12px;
++    color: white;
++    font-size: 1rem;
++    font-weight: 600;
++    cursor: pointer;
++    transition: all 0.3s;
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    gap: 10px;
++    box-shadow: 0 4px 20px rgba(0, 212, 170, 0.25);
++}
++
++.compare-btn:hover {
++    transform: translateY(-2px);
++    box-shadow: 0 8px 40px rgba(0, 212, 170, 0.3), 0 0 60px rgba(0, 184, 148, 0.2);
++}
++
++.compare-btn:disabled {
++    opacity: 0.7;
++    cursor: not-allowed;
++    transform: none;
++}
++
++/* Results Section */
++.results-section {
++    margin-bottom: 2rem;
++}
++
++/* Recommendations Grid */
++.recommendations-grid {
++    display: grid;
++    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
++    gap: 1.5rem;
++    margin-bottom: 2rem;
++}
++
++/* Recommendation Card - Vibrant Gradient */
++.recommendation-card {
++    background: linear-gradient(135deg, rgba(18, 18, 18, 0.9), rgba(8, 8, 8, 0.95));
++    backdrop-filter: blur(20px);
++    -webkit-backdrop-filter: blur(20px);
++    border: 1px solid var(--glass-border);
++    border-radius: 16px;
++    padding: 1.25rem;
++    position: relative;
++    overflow: hidden;
++    transition: transform 0.3s;
++}
++
++.recommendation-card:hover {
++    transform: translateY(-4px);
++    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
++}
++
++.recommendation-badge {
++    display: inline-flex;
++    align-items: center;
++    gap: 8px;
++    padding: 6px 12px;
++    border-radius: 12px;
++    font-weight: 600;
++    font-size: 0.8rem;
++    margin-bottom: 1rem;
++    width: 100%;
++}
++
++.recommendation-content {
++    display: flex;
++    flex-direction: column;
++    gap: 1rem;
++}
++
++.recommendation-platform {
++    display: flex;
++    align-items: center;
++    gap: 10px;
++}
++
++.recommendation-platform h3 {
++    font-size: 1.1rem;
++    font-weight: 700;
++    color: var(--text-primary);
++}
++
++.recommendation-stats {
++    display: flex;
++    justify-content: space-between;
++    align-items: center;
++    border-top: 1px solid var(--glass-border);
++    padding-top: 1rem;
++}
++
++.stat-item {
++    text-align: center;
++}
++
++.stat-label {
++    display: block;
++    font-size: 0.85rem;
++    color: var(--text-secondary);
++    margin-bottom: 4px;
++}
++
++.stat-value {
++    display: block;
++    font-size: 1.5rem;
++    font-weight: 700;
++}
++
++.stat-value.cost {
++    color: var(--success);
++}
++
++.stat-value.performance {
++    color: var(--primary);
++}
++
++.stat-value.popularity {
++    color: var(--warning);
++}
++
++/* Charts Row - Modern SaaS Dashboard Style */
++.charts-row {
++    display: grid;
++    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
++    gap: 1.5rem;
++    margin-bottom: 2rem;
++}
++
++.chart-container {
++    background: var(--glass-bg);
++    backdrop-filter: blur(20px);
++    -webkit-backdrop-filter: blur(20px);
++    border: 1px solid var(--glass-border);
++    border-radius: 24px;
++    padding: 1.75rem;
++    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), 
++                inset 0 1px 0 rgba(255, 255, 255, 0.05);
++    position: relative;
++    overflow: hidden;
++    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
++                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
++                border-color 0.3s ease;
++}
++
++/* Premium gradient accent line */
++.chart-container::before {
++    content: '';
++    position: absolute;
++    top: 0;
++    left: 0;
++    right: 0;
++    height: 2px;
++    background: linear-gradient(90deg, 
++        rgba(0, 212, 170, 0.9), 
++        rgba(124, 58, 237, 0.7), 
++        rgba(0, 184, 148, 0.9));
++    opacity: 0.9;
++}
++
++/* Soft glow on hover */
++.chart-container::after {
++    content: '';
++    position: absolute;
++    top: 0;
++    left: 0;
++    right: 0;
++    bottom: 0;
++    background: radial-gradient(ellipse at top, rgba(0, 212, 170, 0.05), transparent 70%);
++    pointer-events: none;
++    opacity: 0;
++    transition: opacity 0.4s ease;
++}
++
++.chart-container:hover {
++    transform: translateY(-6px);
++    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 
++                0 0 40px rgba(0, 212, 170, 0.08),
++                inset 0 1px 0 rgba(0, 212, 170, 0.04);
++    border-color: rgba(0, 212, 170, 0.2);
++}
++
++.chart-container:hover::after {
++    opacity: 1;
++}
++
++.chart-container h3 {
++    font-size: 1.1rem;
++    margin-bottom: 1rem;
++    display: flex;
++    align-items: center;
++    gap: 10px;
++    font-family: 'Inter', sans-serif;
++    font-weight: 600;
++    color: var(--text-primary);
++}
++
++.chart-container h3 i {
++    color: var(--primary);
++}
++
++.chart-container canvas {
++    max-height: 250px;
++}
++
++/* Full-width chart container for line charts */
++.chart-container.full-width {
++    grid-column: 1 / -1;
++}
++
++@media (max-width: 768px) {
++    .chart-container.full-width {
++        grid-column: auto;
++    }
++}
++
++/* Table Container */
++.table-container {
++    background: var(--glass-bg);
++    backdrop-filter: blur(16px);
++    -webkit-backdrop-filter: blur(16px);
++    border: 1px solid var(--glass-border);
++    border-radius: 20px;
++    padding: 1.5rem;
++    overflow-x: auto;
++    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
++}
++
++.table-header {
++    display: flex;
++    justify-content: space-between;
++    align-items: center;
++    margin-bottom: 1rem;
++    flex-wrap: wrap;
++    gap: 1rem;
++}
++
++.table-header h3 {
++    font-size: 1.1rem;
++    display: flex;
++    align-items: center;
++    gap: 10px;
++}
++
++.table-header h3 i {
++    color: var(--primary);
++}
++
++.table-actions {
++    display: flex;
++    gap: 8px;
++}
++
++.filter-btn {
++    background: var(--dark-bg);
++    border: 1px solid var(--dark-border);
++    border-radius: 6px;
++    padding: 8px 12px;
++    color: var(--text-secondary);
++    font-size: 0.85rem;
++    cursor: pointer;
++    transition: all 0.3s;
++    display: flex;
++    align-items: center;
++    gap: 6px;
++}
++
++.filter-btn:hover {
++    border-color: var(--primary);
++    color: var(--text-primary);
++}
++
++table {
++    width: 100%;
++    border-collapse: collapse;
++    min-width: 800px;
++}
++
++thead {
++    background: var(--dark-bg);
++}
++
++th {
++    padding: 14px 12px;
++    text-align: left;
++    font-weight: 600;
++    font-size: 0.8rem;
++    color: var(--text-secondary);
++    text-transform: uppercase;
++    letter-spacing: 0.5px;
++    border-bottom: 1px solid var(--dark-border);
++}
++
++td {
++    padding: 14px 12px;
++    border-bottom: 1px solid var(--dark-border);
++    font-size: 0.95rem;
++}
++
++tbody tr {
++    transition: background 0.2s;
++}
++
++tbody tr {
++    transition: all 0.3s ease;
++}
++
++tbody tr:hover {
++    background: linear-gradient(90deg, rgba(0, 212, 170, 0.06), rgba(124, 58, 237, 0.04));
++    transform: scale(1.01);
++    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
++}
++
++/* Rank Badge */
++.rank-badge {
++    display: inline-flex;
++    align-items: center;
++    justify-content: center;
++    width: 32px;
++    height: 32px;
++    border-radius: 8px;
++    font-weight: 700;
++    font-size: 0.85rem;
++}
++
++.rank-1 {
++    background: linear-gradient(135deg, #00d4aa, #00b894);
++    color: #060b1e;
++}
++
++.rank-2 {
++    background: linear-gradient(135deg, #94a3b8, #64748b);
++    color: #fff;
++}
++
++.rank-3 {
++    background: linear-gradient(135deg, #cd7f32, #b87333);
++    color: #fff;
++}
++
++.rank-other {
++    background: var(--dark-border);
++    color: var(--text-secondary);
++}
++
++/* Platform Badge */
++.platform-badge {
++    display: inline-block;
++    color: white;
++    padding: 4px 10px;
++    border-radius: 4px;
++    font-size: 0.8rem;
++    font-weight: 600;
++}
++
++/* Performance Level */
++.perf-high {
++    color: var(--success);
++    font-weight: 600;
++}
++
++.perf-medium {
++    color: var(--warning);
++    font-weight: 600;
++}
++
++.perf-low {
++    color: var(--danger);
++    font-weight: 600;
++}
++
++/* Loading State */
++.loading-state {
++    text-align: center;
++    padding: 4rem 2rem;
++    display: flex;
++    flex-direction: column;
++    align-items: center;
++    gap: 1rem;
++}
++
++.loader {
++    width: 60px;
++    height: 60px;
++    border: 4px solid var(--dark-border);
++    border-top-color: var(--primary);
++    border-radius: 50%;
++    animation: spin 1s linear infinite;
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    font-size: 1.5rem;
++    color: var(--primary);
++}
++
++@keyframes spin {
++    to { transform: rotate(360deg); }
++}
++
++@keyframes fadeInUp {
++    from { opacity: 0; transform: translateY(12px); }
++    to { opacity: 1; transform: translateY(0); }
++}
++
++.loading-state p {
++    color: var(--text-secondary);
++    font-size: 1.1rem;
++}
++
++/* Empty State */
++.empty-state {
++    text-align: center;
++    padding: 4rem 2rem;
++    background: var(--glass-bg);
++    backdrop-filter: blur(20px);
++    -webkit-backdrop-filter: blur(20px);
++    border: 1px solid var(--glass-border);
++    border-radius: 24px;
++    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
++}
++
++.empty-icon {
++    font-size: 4rem;
++    color: var(--primary);
++    margin-bottom: 1rem;
++}
++
++.empty-state h3 {
++    font-size: 1.5rem;
++    margin-bottom: 0.5rem;
++}
++
++.empty-state p {
++    color: var(--text-secondary);
++    max-width: 500px;
++    margin: 0 auto 2rem;
++}
++
++.features-grid {
++    display: flex;
++    justify-content: center;
++    gap: 2rem;
++    flex-wrap: wrap;
++}
++
++.feature-item {
++    display: flex;
++    align-items: center;
++    gap: 8px;
++    color: var(--success);
++    font-size: 0.95rem;
++}
++
++.feature-item i {
++    font-size: 1.1rem;
++}
++
++/* Footer */
++/* Footer - Glassmorphism */
++.footer {
++    background: rgba(6, 11, 30, 0.9);
++    backdrop-filter: blur(20px);
++    -webkit-backdrop-filter: blur(20px);
++    border-top: 1px solid var(--glass-border);
++    padding: 1.5rem 2rem;
++    text-align: center;
++}
++
++.footer p {
++    color: var(--text-secondary);
++    margin-bottom: 1rem;
++}
++
++.provider-logos {
++    display: flex;
++    justify-content: center;
++    gap: 1rem;
++    flex-wrap: wrap;
++}
++
++.provider-badge {
++    padding: 6px 12px;
++    border-radius: 6px;
++    font-size: 0.85rem;
++    font-weight: 600;
++    color: white;
++}
++
++.provider-badge.aws {
++    background: #FF9900;
++}
++
++.provider-badge.gcp {
++    background: #4285F4;
++}
++
++.provider-badge.azure {
++    background: #0089D6;
++}
++
++.provider-badge.oci {
++    background: #F80000;
++}
++
++.provider-badge.alibaba {
++    background: #FF6A00;
++}
++
++/* Responsive Design */
++@media (max-width: 768px) {
++    .header {
++        padding: 1rem;
++    }
++    
++    .main-content {
++        padding: 1rem;
++    }
++    
++    .input-section {
++        padding: 1.5rem;
++    }
++    
++    .category-btn {
++        min-width: 100px;
++        padding: 12px 16px;
++        font-size: 0.9rem;
++    }
++    
++    .input-row {
++        grid-template-columns: 1fr;
++    }
++    
++    .recommendation-content {
++        grid-template-columns: 1fr;
++    }
++    
++    .recommendation-stats {
++        justify-content: center;
++    }
++    
++    .charts-row {
++        grid-template-columns: 1fr;
++    }
++    
++    .table-header {
++        flex-direction: column;
++        align-items: flex-start;
++    }
++    
++    table {
++        font-size: 0.85rem;
++    }
++    
++    th, td {
++        padding: 10px 8px;
++    }
++}
++
++@media (max-width: 480px) {
++    .header-actions {
++        width: 100%;
++        justify-content: center;
++    }
++    
++    .logo-text h1 {
++        font-size: 1.25rem;
++    }
++    
++    .category-buttons {
++        flex-direction: column;
++    }
++    
++    .category-btn {
++        width: 100%;
++    }
++    
++    .recommendation-card,
++    .input-section {
++        padding: 1rem;
++    }
++}
++
++/* =========================================
++   VIEW TOGGLE (Cloud vs AI)
++   ========================================= */
++.view-toggle-container {
++    display: flex;
++    justify-content: center;
++    margin: 1rem 0 2rem 0;
++}
++
++.view-toggle {
++    display: flex;
++    background: var(--glass-bg);
++    border: 1px solid var(--glass-border);
++    border-radius: 30px;
++    padding: 0.25rem;
++    backdrop-filter: blur(10px);
++}
++
++.toggle-btn {
++    background: transparent;
++    color: var(--text-secondary);
++    border: none;
++    padding: 0.75rem 1.5rem;
++    font-size: 1rem;
++    font-weight: 500;
++    border-radius: 25px;
++    cursor: pointer;
++    transition: all 0.3s ease;
++    display: flex;
++    align-items: center;
++    gap: 0.5rem;
++}
++
++.toggle-btn:hover {
++    color: var(--text-primary);
++}
++
++.toggle-btn.active {
++    background: var(--gradient);
++    color: #fff;
++    box-shadow: 0 4px 15px rgba(212, 160, 23, 0.3);
++}
++
++/* AI Recommendation Card Overrides */
++#aiRecommendationsGrid .recommendation-badge {
++    justify-content: center;
++}
++
++/* ============================================================
++   THEME TOGGLE BUTTON
++   ============================================================ */
++.theme-toggle {
++    width: 44px;
++    height: 44px;
++    border-radius: 12px;
++    border: 1px solid var(--glass-border);
++    background: var(--glass-bg);
++    color: var(--primary);
++    font-size: 1.15rem;
++    cursor: pointer;
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
++    position: relative;
++    overflow: hidden;
++}
++
++.theme-toggle:hover {
++    background: rgba(212, 160, 23, 0.15);
++    border-color: var(--primary);
++    transform: translateY(-2px) rotate(15deg);
++    box-shadow: 0 4px 20px rgba(212, 160, 23, 0.25);
++}
++
++.theme-toggle i {
++    transition: transform 0.4s ease;
++}
++
++.theme-toggle:active i {
++    transform: rotate(180deg);
++}
++
++/* ============================================================
++   LIGHT THEME OVERRIDES
++   ============================================================ */
++body.light-theme {
++    --primary: #b8860b;
++    --primary-dark: #8b6914;
++    --secondary: #a07808;
++    --dark-bg: #f5f0e1;
++    --dark-card: rgba(255, 255, 255, 0.85);
++    --dark-border: rgba(184, 134, 11, 0.18);
++    --glass-bg: rgba(255, 255, 255, 0.65);
++    --glass-border: rgba(184, 134, 11, 0.15);
++    --text-primary: #1a1408;
++    --text-secondary: #6b5c3e;
++    --text-muted: #a89968;
++    --shadow: 0 4px 6px -1px rgba(184, 134, 11, 0.08);
++    --shadow-lg: 0 10px 15px -3px rgba(184, 134, 11, 0.1);
++    --shadow-glow: 0 0 40px rgba(184, 134, 11, 0.06);
++    --gold-shimmer: linear-gradient(135deg, #b8860b 0%, #d4a017 40%, #b8860b 60%, #8b6914 100%);
++
++    background:
++        radial-gradient(ellipse at top left, rgba(184, 134, 11, 0.06), transparent 50%),
++        radial-gradient(ellipse at top right, rgba(212, 160, 23, 0.04), transparent 50%),
++        linear-gradient(180deg, #faf6eb 0%, #f5f0e1 50%, #faf6eb 100%);
++}
++
++body.light-theme .header {
++    background: rgba(255, 253, 245, 0.9);
++    border-bottom-color: rgba(184, 134, 11, 0.12);
++}
++
++body.light-theme .footer {
++    background: rgba(255, 253, 245, 0.9);
++    border-top-color: rgba(184, 134, 11, 0.12);
++}
++
++body.light-theme .input-section {
++    background: rgba(255, 255, 255, 0.7);
++    border-color: rgba(184, 134, 11, 0.12);
++    box-shadow: 0 8px 32px rgba(184, 134, 11, 0.06);
++}
++
++body.light-theme .input-group input,
++body.light-theme .input-group select {
++    background: rgba(250, 246, 235, 0.8);
++    border-color: rgba(184, 134, 11, 0.15);
++    color: #1a1408;
++}
++
++body.light-theme .input-group select option {
++    background: #faf6eb;
++    color: #1a1408;
++}
++
++body.light-theme .input-group input::placeholder {
++    color: #a89968;
++}
++
++body.light-theme .category-btn {
++    background: #faf6eb;
++    border-color: rgba(184, 134, 11, 0.15);
++    color: #6b5c3e;
++}
++
++body.light-theme .category-btn:hover {
++    border-color: #b8860b;
++    color: #1a1408;
++}
++
++body.light-theme .category-btn.active {
++    color: white;
++}
++
++body.light-theme .service-type-btn {
++    background: #faf6eb;
++    border-color: rgba(184, 134, 11, 0.12);
++    color: #6b5c3e;
++}
++
++body.light-theme .service-type-btn:hover {
++    border-color: #b8860b;
++    color: #1a1408;
++}
++
++body.light-theme .service-type-btn.active {
++    color: white;
++}
++
++body.light-theme .recommendation-card {
++    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(250, 246, 235, 0.95));
++    border-color: rgba(184, 134, 11, 0.12);
++}
++
++body.light-theme .recommendation-card:hover {
++    box-shadow: 0 10px 25px rgba(184, 134, 11, 0.1);
++}
++
++body.light-theme .chart-container {
++    background: rgba(255, 255, 255, 0.7);
++    border-color: rgba(184, 134, 11, 0.1);
++}
++
++body.light-theme .chart-container:hover {
++    box-shadow: 0 16px 48px rgba(184, 134, 11, 0.08);
++    border-color: rgba(184, 134, 11, 0.2);
++}
++
++body.light-theme .table-container {
++    background: rgba(255, 255, 255, 0.7);
++    border-color: rgba(184, 134, 11, 0.1);
++}
++
++body.light-theme thead {
++    background: #faf6eb;
++}
++
++body.light-theme th {
++    color: #6b5c3e;
++    border-bottom-color: rgba(184, 134, 11, 0.15);
++}
++
++body.light-theme td {
++    border-bottom-color: rgba(184, 134, 11, 0.08);
++    color: #1a1408;
++}
++
++body.light-theme tbody tr:hover {
++    background: linear-gradient(90deg, rgba(184, 134, 11, 0.06), rgba(212, 160, 23, 0.03));
++}
++
++body.light-theme .empty-state {
++    background: rgba(255, 255, 255, 0.7);
++    border-color: rgba(184, 134, 11, 0.1);
++}
++
++body.light-theme .compare-btn {
++    box-shadow: 0 4px 20px rgba(184, 134, 11, 0.2);
++}
++
++body.light-theme .compare-btn:hover {
++    box-shadow: 0 8px 40px rgba(184, 134, 11, 0.3);
++}
++
++body.light-theme .stats-badge {
++    background: rgba(250, 246, 235, 0.8);
++    border-color: rgba(184, 134, 11, 0.12);
++}
++
++body.light-theme .stats-badge:hover {
++    background: rgba(184, 134, 11, 0.08);
++}
++
++body.light-theme .theme-toggle {
++    background: rgba(250, 246, 235, 0.8);
++    border-color: rgba(184, 134, 11, 0.15);
++}
++
++body.light-theme .theme-toggle:hover {
++    background: rgba(184, 134, 11, 0.1);
++}
++
++body.light-theme .filter-btn {
++    background: #faf6eb;
++    border-color: rgba(184, 134, 11, 0.12);
++    color: #6b5c3e;
++}
++
++body.light-theme .rank-other {
++    background: rgba(184, 134, 11, 0.1);
++    color: #6b5c3e;
++}
++
++.premium-select-wrapper {
++    position: relative;
++    width: 100%;
++}
++
++.premium-select {
++    width: 100%;
++    padding: 0.8rem;
++    padding-right: 2.5rem; /* Space for arrow */
++    background: rgba(15, 23, 42, 0.4);
++    border: 1px solid rgba(255, 255, 255, 0.1);
++    border-radius: 8px;
++    color: white;
++    font-family: 'Inter', sans-serif;
++    cursor: pointer;
++    transition: all 0.3s;
++    appearance: none;
++    -webkit-appearance: none;
++}
++
++.select-arrow {
++    position: absolute;
++    right: 1rem;
++    top: 50%;
++    transform: translateY(-50%);
++    color: #94a3b8;
++    pointer-events: none;
++    transition: all 0.3s;
++    font-size: 0.8rem;
++}
++
++.premium-select-wrapper:hover .select-arrow {
++    color: #d4a017;
++}
++
++.premium-select:hover {
++    border-color: rgba(212, 160, 23, 0.4);
++    background-color: rgba(30, 41, 59, 0.6);
++}
++
++.premium-select:focus {
++    outline: none;
++    border-color: #d4a017;
++    box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.2);
++}
++
++.premium-select option {
++    background: #0f172a;
++    color: white;
++    padding: 10px;
++}
++
++/* Light Theme */
++body.light-theme .premium-select {
++    background: white;
++    border-color: rgba(184, 134, 11, 0.15);
++    color: #6b5c3e;
++}
++
++body.light-theme .select-arrow {
++    color: #6b5c3e;
++}
++
++body.light-theme .premium-select:hover {
++    background-color: #faf6eb;
++}
++
++body.light-theme .premium-select option {
++    background: white;
++    color: #6b5c3e;
++}
++
++/* ============================================================
++   VISIT SERVICE / TRY TOOL NAVIGATION BUTTON
++   ============================================================ */
++.visit-service-btn {
++    display: inline-flex;
++    align-items: center;
++    justify-content: center;
++    gap: 8px;
++    margin-top: 1rem;
++    padding: 10px 20px;
++    border: 1px solid rgba(212, 160, 23, 0.4);
++    border-radius: 10px;
++    background: rgba(212, 160, 23, 0.08);
++    color: var(--primary);
++    font-family: 'Inter', sans-serif;
++    font-size: 0.9rem;
++    font-weight: 600;
++    text-decoration: none;
++    cursor: pointer;
++    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
++    position: relative;
++    overflow: hidden;
++    width: 100%;
++}
++
++.visit-service-btn::before {
++    content: '';
++    position: absolute;
++    inset: 0;
++    background: linear-gradient(135deg, rgba(212, 160, 23, 0.15), rgba(245, 208, 96, 0.1));
++    opacity: 0;
++    transition: opacity 0.3s ease;
++}
++
++.visit-service-btn:hover {
++    background: rgba(212, 160, 23, 0.18);
++    border-color: var(--primary);
++    transform: translateY(-2px);
++    box-shadow: 0 6px 24px rgba(212, 160, 23, 0.2);
++    color: #fbbf24;
++    text-decoration: none;
++}
++
++.visit-service-btn:hover::before {
++    opacity: 1;
++}
++
++.visit-service-btn i {
++    font-size: 0.8rem;
++    transition: transform 0.3s ease;
++}
++
++.visit-service-btn:hover i {
++    transform: translateX(3px);
++}
++
++/* Table Service Link */
++.table-service-link {
++    color: var(--primary);
++    text-decoration: none;
++    font-weight: 600;
++    transition: all 0.25s ease;
++    border-bottom: 1px dashed rgba(212, 160, 23, 0.3);
++    padding-bottom: 1px;
++}
++
++.table-service-link:hover {
++    color: #fbbf24;
++    border-bottom-color: #fbbf24;
++    text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
++}
++
++.table-service-link i {
++    margin-left: 4px;
++    transition: transform 0.2s ease;
++}
++
++.table-service-link:hover i {
++    transform: translateX(2px);
++}
++
++/* Light theme overrides for navigation buttons */
++body.light-theme .visit-service-btn {
++    background: rgba(184, 134, 11, 0.06);
++    border-color: rgba(184, 134, 11, 0.25);
++    color: #8b6914;
++}
++
++body.light-theme .visit-service-btn:hover {
++    background: rgba(184, 134, 11, 0.12);
++    border-color: #b8860b;
++    color: #b8860b;
++    box-shadow: 0 6px 24px rgba(184, 134, 11, 0.15);
++}
++
++body.light-theme .table-service-link {
++    color: #8b6914;
++    border-bottom-color: rgba(184, 134, 11, 0.2);
++}
++
++body.light-theme .table-service-link:hover {
++    color: #b8860b;
++    border-bottom-color: #b8860b;
++    text-shadow: none;
++}
++
++/* ============================================================
++   SERVICE TYPE GRID & PROVIDER FILTER STYLES
++   ============================================================ */
++.service-type-grid {
++    display: flex;
++    flex-wrap: wrap;
++    gap: 10px;
++    margin-top: 10px;
++    background: rgba(15, 23, 42, 0.2);
++    padding: 15px;
++    border-radius: 12px;
++    border: 1px solid rgba(255, 255, 255, 0.05);
++}
++
++.type-btn {
++    background: rgba(30, 41, 59, 0.6);
++    border: 1px solid rgba(255, 255, 255, 0.1);
++    border-radius: 8px;
++    padding: 8px 16px;
++    color: #94a3b8;
++    font-size: 0.85rem;
++    font-weight: 500;
++    cursor: pointer;
++    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
++    display: flex;
++    align-items: center;
++    gap: 8px;
++}
++
++.type-btn:hover {
++    background: rgba(59, 130, 246, 0.1);
++    border-color: rgba(59, 130, 246, 0.4);
++    color: white;
++    transform: translateY(-2px);
++}
++
++.type-btn.active {
++    background: var(--gradient);
++    border-color: transparent;
++    color: white;
++    box-shadow: 0 4px 12px rgba(212, 160, 23, 0.3);
++}
++
++/* Provider Filter Bar */
++.provider-filter-bar {
++    background: rgba(15, 23, 42, 0.4);
++    border: 1px solid rgba(255, 255, 255, 0.05);
++    border-radius: 16px;
++    padding: 12px 20px;
++    margin-bottom: 2rem;
++    display: flex;
++    align-items: center;
++    gap: 15px;
++    backdrop-filter: blur(10px);
++}
++
++.filter-label {
++    color: #94a3b8;
++    font-size: 0.9rem;
++    font-weight: 600;
++    white-space: nowrap;
++}
++
++.provider-filter-chips {
++    display: flex;
++    gap: 8px;
++    overflow-x: auto;
++    padding-bottom: 5px;
++    scrollbar-width: none;
++}
++
++.provider-filter-chips::-webkit-scrollbar {
++    display: none;
++}
++
++.provider-chip {
++    background: rgba(30, 41, 59, 0.8);
++    border: 1px solid rgba(255, 255, 255, 0.1);
++    border-radius: 30px;
++    padding: 6px 14px;
++    color: #94a3b8;
++    font-size: 0.85rem;
++    font-weight: 600;
++    cursor: pointer;
++    transition: all 0.2s;
++    display: flex;
++    align-items: center;
++    gap: 6px;
++    white-space: nowrap;
++}
++
++.provider-chip:hover {
++    background: rgba(255, 255, 255, 0.1);
++    color: white;
++}
++
++.provider-chip.active {
++    background: white;
++    color: #0f172a;
++    border-color: white;
++}
++
++/* Clickable Stats Cards */
++#providerStatsGrid .provider-stat-card {
++    cursor: pointer;
++    transition: all 0.3s;
++}
++
++#providerStatsGrid .provider-stat-card:hover {
++    transform: translateY(-5px);
++    border-color: rgba(212, 160, 23, 0.4) !important;
++    background: rgba(212, 160, 23, 0.05) !important;
++    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
++}
++
++/* Light Theme Overrides */
++body.light-theme .service-type-grid {
++    background: rgba(0, 0, 0, 0.03);
++    border-color: rgba(0, 0, 0, 0.05);
++}
++
++body.light-theme .type-btn {
++    background: white;
++    border-color: rgba(184, 134, 11, 0.15);
++    color: #6b5c3e;
++}
++
++body.light-theme .type-btn:hover {
++    background: rgba(184, 134, 11, 0.05);
++    color: #1a1408;
++}
++
++body.light-theme .provider-filter-bar {
++    background: rgba(255, 255, 255, 0.5);
++    border-color: rgba(184, 134, 11, 0.1);
++}
++
++body.light-theme .provider-chip {
++    background: white;
++    border-color: rgba(184, 134, 11, 0.15);
++    color: #6b5c3e;
++}
++
++body.light-theme .provider-chip.active {
++    background: #1a1408;
++    color: white;
++    border-color: #1a1408;
++}
++
++/* Interactive Stats Badges */
++.clickable-badge { cursor: pointer; transition: all 0.3s ease; }
++.clickable-badge:hover { transform: translateY(-2px); background: rgba(212, 160, 23, 0.15) !important; border-color: #d4a017 !important; }
++.clickable-badge:active { transform: translateY(0); }
++
++/* Knowledge Modal Styles */
++.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 10000; animation: fadeIn 0.3s ease; }
++.modal-content { max-width: 900px; width: 95%; max-height: 85vh; overflow-y: auto; padding: 2.5rem; position: relative; border: 1px solid rgba(212, 160, 23, 0.2); }
++.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 1rem; }
++.close-modal { background: none; border: none; color: #94a3b8; font-size: 2rem; cursor: pointer; transition: all 0.3s; }
++.close-modal:hover { color: #d4a017; transform: rotate(90deg); }
++.knowledge-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; }
++.knowledge-category h4 { color: #d4a017; margin-bottom: 1rem; font-size: 1.1rem; letter-spacing: 1px; }
++.knowledge-category ul { list-style: none; padding: 0; }
++.knowledge-category li { color: #e2e8f0; margin-bottom: 0.5rem; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
++.knowledge-category li i { color: #10b981; font-size: 0.8rem; }
++.knowledge-item { text-align: center; padding: 2rem; background: rgba(30, 41, 59, 0.5); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.3s; }
++.knowledge-item:hover { border-color: #d4a017; transform: translateY(-5px); }
++@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
++
++/* Official Brand Colors for Provider Badges */
++.provider-badge.aws { background: rgba(255, 153, 0, 0.15); color: #FF9900; border: 1px solid rgba(255, 153, 0, 0.3); }
++.provider-badge.gcp { background: rgba(66, 133, 244, 0.15); color: #4285F4; border: 1px solid rgba(66, 133, 244, 0.3); }
++.provider-badge.azure { background: rgba(0, 120, 212, 0.15); color: #0078D4; border: 1px solid rgba(0, 120, 212, 0.3); }
++.provider-badge.oci { background: rgba(248, 0, 0, 0.15); color: #F80000; border: 1px solid rgba(248, 0, 0, 0.3); }
++.provider-badge.alibaba { background: rgba(255, 106, 0, 0.15); color: #FF6A00; border: 1px solid rgba(255, 106, 0, 0.3); }
++
++/* Table Row Platform Colors */
++.platform-tag.aws { background: #FF9900; color: #fff; }
++.platform-tag.gcp { background: #4285F4; color: #fff; }
++.platform-tag.azure { background: #0078D4; color: #fff; }
++.platform-tag.oci { background: #F80000; color: #fff; }
++.platform-tag.alibaba { background: #FF6A00; color: #fff; }
++
++/* Executive Summary Styles */
++.executive-summary-card { background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)); border: 1px solid rgba(212, 160, 23, 0.3); padding: 1.5rem; }
++.summary-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 1rem; }
++.summary-title { display: flex; align-items: center; gap: 12px; font-size: 1.25rem; font-weight: 700; color: #d4a017; }
++.summary-actions { display: flex; gap: 10px; }
++.action-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #94a3b8; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 6px; }
++.action-btn:hover { background: rgba(212, 160, 23, 0.15); border-color: #d4a017; color: white; }
++.summary-content { line-height: 1.7; color: #e2e8f0; font-size: 1.05rem; }
++.summary-content strong { color: #fbbf24; }
++.typing-indicator { display: flex; gap: 5px; padding: 10px 0; }
++.typing-indicator span { width: 8px; height: 8px; background: #d4a017; border-radius: 50%; animation: blink 1.4s infinite; opacity: 0.3; }
++.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
++.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
++@keyframes blink { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
++
++/* ============================================================
++   ADDITIONAL HEADER BUTTONS (used by React Header)
++   ============================================================ */
++.logout-btn {
++  background: rgba(239, 68, 68, 0.15);
++  color: #fca5a5;
++  border: 1px solid rgba(239, 68, 68, 0.25);
++  padding: 0.5rem 1rem;
++  border-radius: 8px;
++  cursor: pointer;
++  font-size: 0.85rem;
++  font-weight: 600;
++  transition: all 0.3s;
++  display: flex;
++  align-items: center;
++  gap: 6px;
++}
++.logout-btn:hover { background: rgba(239, 68, 68, 0.28); }
++
++.login-link {
++  background: rgba(0, 212, 170, 0.15);
++  color: #00d4aa;
++  border: 1px solid rgba(0, 212, 170, 0.2);
++  padding: 0.5rem 1rem;
++  border-radius: 8px;
++  cursor: pointer;
++  font-size: 0.85rem;
++  font-weight: 600;
++  transition: all 0.3s;
++  text-decoration: none;
++  display: flex;
++  align-items: center;
++  gap: 6px;
++}
++.login-link:hover { background: rgba(0, 212, 170, 0.28); color: #fff; }
+diff --git a/cloudcompare-frontend/src/main.jsx b/cloudcompare-frontend/src/main.jsx
+index 7a2bbc3..f1fa80a 100644
+--- a/cloudcompare-frontend/src/main.jsx
++++ b/cloudcompare-frontend/src/main.jsx
+@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
+ import { BrowserRouter } from 'react-router-dom'
+ import App from './App.jsx'
+ import './index.css'
++import './legacy-dashboard.css'
+ 
+ createRoot(document.getElementById('root')).render(
+   <StrictMode>
+diff --git a/cloudcompare-frontend/src/pages/DashboardPage.jsx b/cloudcompare-frontend/src/pages/DashboardPage.jsx
+index cf2edc9..75c74f4 100644
+--- a/cloudcompare-frontend/src/pages/DashboardPage.jsx
++++ b/cloudcompare-frontend/src/pages/DashboardPage.jsx
+@@ -12,23 +12,19 @@ import { useCompare } from '../hooks/useCompare.js'
+ import { aiApi } from '../api/client.js'
+ 
+ export default function DashboardPage() {
+-  // View toggle
+   const [activeView, setActiveView] = useState('cloud')
+ 
+-  // Cloud state
+   const [category, setCategory] = useState('compute')
+   const [serviceType, setServiceType] = useState('all')
+   const [priority, setPriority] = useState('balanced')
+   const [resources, setResources] = useState({ cpu: 2, ram: 4, storage: 100, hours: 730 })
+   const { results: cloudResults, loading: cloudLoading, error: cloudError, compare } = useCompare()
+ 
+-  // AI state
+   const [aiResults, setAiResults] = useState(null)
+   const [aiLoading, setAiLoading] = useState(false)
+   const [aiError, setAiError] = useState(null)
+   const [lastQuery, setLastQuery] = useState('')
+ 
+-  // ─── Cloud Compare ─────────────────────
+   const handleCompare = () => {
+     compare({
+       category,
+@@ -42,22 +38,17 @@ export default function DashboardPage() {
+     })
+   }
+ 
+-  // ─── AI NLP Query ──────────────────────
+   const handleNlpQuery = async (query) => {
+     setAiLoading(true)
+     setAiError(null)
+     setLastQuery(query)
+     try {
+-      // Try NLP endpoint first, fallback to standard ai-compare
+       let res
+       try {
+         res = await aiApi.nlpCompare(query)
+       } catch {
+         res = await aiApi.compareTools(query)
+       }
+-
+-      // BUG 5 FIX: backend wraps in { data: { tools: [...], ... } }
+-      // Extract the inner data payload
+       const payload = res.data?.data || res.data || null
+       setAiResults(payload)
+     } catch (err) {
+@@ -67,96 +58,66 @@ export default function DashboardPage() {
+     }
+   }
+ 
+-  // Derive service list for chatbot context (handles both {services:[]} and array)
+   const servicesList = cloudResults?.services || (Array.isArray(cloudResults) ? cloudResults : [])
+ 
+   return (
+-    <div className="relative z-10 min-h-screen">
++    <div className="app-container">
+       <Header />
+ 
+-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
++      <main className="main-content">
+         {/* View Toggle */}
+-        <div className="flex justify-center mb-8">
+-          <div className="inline-flex rounded-xl border border-space-border overflow-hidden shadow-lg shadow-black/30">
++        <div className="view-toggle-container">
++          <div className="view-toggle">
+             <button
++              className={`toggle-btn ${activeView === 'cloud' ? 'active' : ''}`}
+               onClick={() => setActiveView('cloud')}
+-              className={`px-6 py-2.5 text-sm font-medium transition-all cursor-pointer
+-                ${activeView === 'cloud'
+-                  ? 'bg-gold-primary/20 text-gold-accent border-r border-gold-primary/30'
+-                  : 'bg-space-bg/50 text-text-secondary hover:text-text-primary border-r border-space-border'
+-                }`}
+             >
+-              <i className="fas fa-server mr-2" />Cloud Services
++              <i className="fas fa-server" /> Cloud Services
+             </button>
+             <button
++              className={`toggle-btn ${activeView === 'ai' ? 'active' : ''}`}
+               onClick={() => setActiveView('ai')}
+-              className={`px-6 py-2.5 text-sm font-medium transition-all cursor-pointer
+-                ${activeView === 'ai'
+-                  ? 'bg-gold-primary/20 text-gold-accent'
+-                  : 'bg-space-bg/50 text-text-secondary hover:text-text-primary'
+-                }`}
+             >
+-              <i className="fas fa-robot mr-2" />AI Tools
++              <i className="fas fa-robot" /> AI Tools
+             </button>
+           </div>
+         </div>
+ 
+-        <ChatbotPanel
+-          activeView={activeView}
+-          cloudContext={{
+-            category,
+-            serviceType,
+-            priority,
+-            resources,
+-            services: servicesList
+-          }}
+-          aiToolsContext={{
+-            query: lastQuery,
+-            tools: aiResults?.tools || []
+-          }}
+-        />
+-
+         {/* ═══════════ CLOUD VIEW ═══════════ */}
+         {activeView === 'cloud' && (
+           <div>
+-            <div className="glass-card p-6 mb-6">
+-              <div className="mb-4">
+-                <h2 className="text-lg font-bold text-text-primary">
+-                  <i className="fas fa-sliders-h mr-2 text-gold-primary" />Configure Your Requirements
+-                </h2>
+-                <p className="text-sm text-text-secondary mt-1">Select your cloud service needs and we'll find the best option</p>
++            <section className="input-section">
++              <div className="section-header">
++                <h2><i className="fas fa-sliders-h" /> Configure Your Requirements</h2>
++                <p>Select your cloud service needs and we'll find the best option</p>
+               </div>
+ 
+               <CategorySelector selected={category} onChange={(c) => { setCategory(c); setServiceType('all') }} />
++
+               <ResourceInputs values={resources} onChange={setResources} />
+ 
+-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
++              <div className="input-row">
+                 <ServiceTypeSelect category={category} value={serviceType} onChange={setServiceType} />
+ 
+-                <div>
+-                  <label className="block text-xs font-medium text-text-secondary mb-2">
+-                    <i className="fas fa-sort-amount-up mr-1 text-gold-primary" />Priority
+-                  </label>
+-                  <select
+-                    id="priority-select"
+-                    value={priority}
+-                    onChange={(e) => setPriority(e.target.value)}
+-                    className="w-full px-3 py-2.5 rounded-xl bg-space-bg/50 border border-space-border text-text-primary text-sm
+-                               appearance-none cursor-pointer focus:border-gold-primary focus:outline-none focus:ring-2 focus:ring-gold-primary/20"
+-                  >
+-                    <option value="balanced">Balanced (Cost + Performance)</option>
+-                    <option value="cost">Cost Optimization</option>
+-                    <option value="performance">Maximum Performance</option>
+-                  </select>
++                <div className="input-group">
++                  <label><i className="fas fa-sort-amount-up" /> Priority</label>
++                  <div className="premium-select-wrapper">
++                    <select
++                      id="priority-select"
++                      value={priority}
++                      onChange={(e) => setPriority(e.target.value)}
++                      className="premium-select"
++                    >
++                      <option value="balanced">Balanced (Cost + Performance)</option>
++                      <option value="cost">Cost Optimization</option>
++                      <option value="performance">Maximum Performance</option>
++                    </select>
++                    <i className="fas fa-chevron-down select-arrow" />
++                  </div>
+                 </div>
+ 
+-                <div className="flex items-end">
+-                  <button
+-                    id="compare-btn"
+-                    onClick={handleCompare}
+-                    disabled={cloudLoading}
+-                    className="btn-gold w-full flex items-center justify-center gap-2 !py-2.5"
+-                  >
++                <div className="input-group action-group">
++                  <button className="compare-btn" id="compare-btn" onClick={handleCompare} disabled={cloudLoading}>
+                     {cloudLoading ? (
+                       <div className="pulse-loader"><span /><span /><span /></div>
+                     ) : (
+@@ -165,35 +126,50 @@ export default function DashboardPage() {
+                   </button>
+                 </div>
+               </div>
+-            </div>
++            </section>
+ 
+-            {/* Cloud Error */}
+             {cloudError && (
+-              <div className="mb-6 p-4 rounded-xl bg-accent-red/10 border border-accent-red/30 text-red-300 text-sm">
+-                <i className="fas fa-exclamation-triangle mr-2" />{cloudError}
++              <div className="empty-state" style={{ marginBottom: '1.5rem' }}>
++                <div className="empty-icon"><i className="fas fa-exclamation-triangle" /></div>
++                <h3>Couldn't load results</h3>
++                <p>{cloudError}</p>
+               </div>
+             )}
+ 
+-            {/* Cloud Results */}
+             {cloudResults && (
+-              <div className="animate-fade-in-up">
+-                {/* Recommendation banner */}
++              <section className="results-section">
+                 {cloudResults.recommendation && (
+-                  <div className="mb-4 p-4 rounded-xl bg-gold-primary/10 border border-gold-primary/30 text-gold-accent text-sm">
+-                    <i className="fas fa-star mr-2 text-gold-primary" />
+-                    {cloudResults.recommendation}
++                  <div className="executive-summary-card premium-card" style={{ marginBottom: '1.5rem' }}>
++                    <div className="summary-header">
++                      <div className="summary-title">
++                        <i className="fas fa-star" />
++                        <span>Top Recommendation</span>
++                      </div>
++                    </div>
++                    <div className="summary-content">{cloudResults.recommendation}</div>
+                   </div>
+                 )}
+ 
+-                {/* Provider Cards */}
+-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
++                <div className="recommendations-grid">
+                   {servicesList.map((svc, i) => (
+                     <ProviderCard key={svc.provider || i} service={svc} rank={i + 1} />
+                   ))}
+                 </div>
+ 
+-                {/* Charts */}
+                 <ComparisonCharts services={servicesList} />
++              </section>
++            )}
++
++            {!cloudResults && !cloudError && (
++              <div className="empty-state">
++                <div className="empty-icon"><i className="fas fa-server" /></div>
++                <h3>Ready to Compare</h3>
++                <p>Configure your requirements above and click "Compare Services" to find the best cloud service for your needs.</p>
++                <div className="features-grid">
++                  <div className="feature-item"><i className="fas fa-check-circle" /><span>5 Cloud Providers</span></div>
++                  <div className="feature-item"><i className="fas fa-check-circle" /><span>Smart Ranking</span></div>
++                  <div className="feature-item"><i className="fas fa-check-circle" /><span>Cost Estimation</span></div>
++                </div>
+               </div>
+             )}
+           </div>
+@@ -202,29 +178,48 @@ export default function DashboardPage() {
+         {/* ═══════════ AI VIEW ═══════════ */}
+         {activeView === 'ai' && (
+           <div>
+-            <div className="glass-card p-6 mb-6">
+-              <div className="mb-4">
+-                <h2 className="text-lg font-bold text-text-primary">
+-                  <i className="fas fa-brain mr-2 text-gold-primary" />AI Tool Finder
+-                </h2>
+-                <p className="text-sm text-text-secondary mt-1">
+-                  Ask in plain English — our NLP engine will find the best AI tools for your needs
+-                </p>
++            <section className="input-section">
++              <div className="section-header">
++                <h2><i className="fas fa-brain" /> AI Tool Recommendation</h2>
++                <p>Ask in plain English — our NLP engine will find the best AI tools for your needs</p>
+               </div>
+               <NlpQueryInput onSubmit={handleNlpQuery} loading={aiLoading} />
+-            </div>
++            </section>
+ 
+-            {/* AI Error */}
+             {aiError && (
+-              <div className="mb-6 p-4 rounded-xl bg-accent-red/10 border border-accent-red/30 text-red-300 text-sm">
+-                <i className="fas fa-exclamation-triangle mr-2" />{aiError}
++              <div className="empty-state">
++                <div className="empty-icon"><i className="fas fa-exclamation-triangle" /></div>
++                <h3>Couldn't load results</h3>
++                <p>{aiError}</p>
+               </div>
+             )}
+ 
+-            {/* AI Results — BUG 5 FIX: aiResults now has correct shape { tools, totalResults, ... } */}
+             {aiResults && <AiResultsGrid results={aiResults} query={lastQuery} />}
++            {!aiResults && !aiError && (
++              <div className="empty-state">
++                <div className="empty-icon"><i className="fas fa-robot" /></div>
++                <h3>Ready to Compare AI</h3>
++                <p>Enter a query above to find the best AI models for your needs.</p>
++              </div>
++            )}
+           </div>
+         )}
++
++        {/* Chatbots — always visible, mirroring legacy */}
++        <ChatbotPanel
++          activeView={activeView}
++          cloudContext={{
++            category,
++            serviceType,
++            priority,
++            resources,
++            services: servicesList
++          }}
++          aiToolsContext={{
++            query: lastQuery,
++            tools: aiResults?.tools || []
++          }}
++        />
+       </main>
+     </div>
+   )

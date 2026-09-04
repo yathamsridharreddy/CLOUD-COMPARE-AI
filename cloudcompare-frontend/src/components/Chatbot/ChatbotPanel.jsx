@@ -14,11 +14,7 @@ const starterPrompts = {
   ]
 }
 
-export default function ChatbotPanel({
-  activeView,
-  cloudContext,
-  aiToolsContext
-}) {
+export default function ChatbotPanel({ activeView, cloudContext, aiToolsContext }) {
   const [mode, setMode] = useState(activeView === 'ai' ? 'ai' : 'cloud')
   const [question, setQuestion] = useState('')
   const [messages, setMessages] = useState([
@@ -33,7 +29,6 @@ export default function ChatbotPanel({
 
   const prompts = useMemo(() => starterPrompts[mode], [mode])
 
-  // Auto-scroll to bottom when new messages appear
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
@@ -52,8 +47,6 @@ export default function ChatbotPanel({
         ? await chatApi.cloud(cleanQuestion, cloudContext)
         : await chatApi.aiTools(cleanQuestion, aiToolsContext)
 
-      // BUG 6 FIX: backend returns { response: "..." } not { reply: "..." }
-      // Support both wrapped (data.data.response) and flat (data.response) shapes
       const reply =
         res.data?.data?.response ||
         res.data?.data?.reply    ||
@@ -74,105 +67,105 @@ export default function ChatbotPanel({
   }
 
   return (
-    <section className="glass-card p-5 mb-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
-        <div>
-          <h2 className="text-lg font-bold text-text-primary">
-            <i className="fas fa-comments mr-2 text-gold-primary" />CloudCompare Assistant
-          </h2>
-          <p className="text-sm text-text-secondary mt-1">
-            Get chatbot guidance using your current cloud or AI comparison context.
-          </p>
-        </div>
-
-        <div className="inline-flex rounded-xl border border-space-border overflow-hidden self-start lg:self-auto">
-          <button
-            type="button"
-            onClick={() => setMode('cloud')}
-            className={`px-4 py-2 text-xs sm:text-sm font-medium transition-all cursor-pointer border-r border-space-border
-              ${mode === 'cloud' ? 'bg-gold-primary/20 text-gold-accent' : 'bg-space-bg/50 text-text-secondary hover:text-text-primary'}`}
-          >
-            <i className="fas fa-cloud mr-2" />Cloud Architect
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('ai')}
-            className={`px-4 py-2 text-xs sm:text-sm font-medium transition-all cursor-pointer
-              ${mode === 'ai' ? 'bg-gold-primary/20 text-gold-accent' : 'bg-space-bg/50 text-text-secondary hover:text-text-primary'}`}
-          >
-            <i className="fas fa-robot mr-2" />AI Tools
-          </button>
-        </div>
+    <section className="input-section" style={{ marginTop: '2rem' }}>
+      <div className="section-header">
+        <h2><i className="fas fa-comments" /> CloudCompare Assistant</h2>
+        <p>Get chatbot guidance using your current cloud or AI comparison context.</p>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-5">
-        <div className="rounded-xl border border-space-border bg-space-bg/40 overflow-hidden">
-          <div className="h-56 overflow-y-auto p-4 space-y-3">
+      <div className="input-row" style={{ gridTemplateColumns: '1fr', gap: '1rem' }}>
+        <div className="input-group">
+          <label><i className="fas fa-chess-knight" /> Choose Chat Mode</label>
+          <div className="category-buttons" style={{ justifyContent: 'flex-start' }}>
+            <button
+              type="button"
+              className={`category-btn ${mode === 'cloud' ? 'active' : ''}`}
+              onClick={() => setMode('cloud')}
+            >
+              <i className="fas fa-cloud" /><span>Cloud Architect</span>
+            </button>
+            <button
+              type="button"
+              className={`category-btn ${mode === 'ai' ? 'active' : ''}`}
+              onClick={() => setMode('ai')}
+            >
+              <i className="fas fa-robot" /><span>AI Tools</span>
+            </button>
+          </div>
+        </div>
+
+        <div
+          className="chat-window"
+          style={{
+            display: 'flex', flexDirection: 'column',
+            border: '1px solid var(--glass-border)', borderRadius: '14px',
+            overflow: 'hidden', background: 'rgba(15,23,42,0.6)'
+          }}
+        >
+          <div className="chat-messages" style={{ height: '220px', overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {messages.map((message, index) => (
               <div
                 key={`${message.role}-${index}`}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`chat-message ${message.role === 'user' ? 'user' : ''}`}
+                style={{
+                  alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
+                  maxWidth: '85%', whiteSpace: 'pre-line',
+                  padding: '0.7rem 1rem', borderRadius: '14px', fontSize: '0.85rem', lineHeight: 1.5,
+                  background: message.role === 'user' ? 'rgba(0,210,255,0.15)' : 'rgba(255,255,255,0.05)',
+                  color: message.role === 'user' ? '#00d2ff' : '#94a3b8',
+                  border: '1px solid var(--glass-border)'
+                }}
               >
-                <div
-                  className={`max-w-[85%] whitespace-pre-line rounded-xl px-4 py-3 text-sm leading-relaxed border
-                    ${message.role === 'user'
-                      ? 'bg-gold-primary/20 text-gold-accent border-gold-primary/30'
-                      : 'bg-space-bg/70 text-text-secondary border-space-border'}`}
-                >
-                  {message.text}
-                </div>
+                {message.text}
               </div>
             ))}
             {loading && (
-              <div className="flex justify-start">
-                <div className="rounded-xl px-4 py-3 bg-space-bg/70 border border-space-border">
-                  <div className="pulse-loader"><span /><span /><span /></div>
-                </div>
+              <div className="chat-message" style={{ alignSelf: 'flex-start' }}>
+                <div className="pulse-loader"><span /><span /><span /></div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
           <form
-            onSubmit={(event) => {
-              event.preventDefault()
-              sendQuestion()
-            }}
-            className="border-t border-space-border p-3 flex flex-col sm:flex-row gap-3"
+            onSubmit={(event) => { event.preventDefault(); sendQuestion() }}
+            className="chat-input-row"
+            style={{ display: 'flex', gap: '0.75rem', borderTop: '1px solid var(--glass-border)', padding: '0.75rem' }}
           >
             <input
               type="text"
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
               placeholder={mode === 'cloud' ? 'Ask for a deployment plan or provider recommendation...' : 'Ask which AI tool fits your workflow...'}
-              className="flex-1 px-4 py-3 rounded-xl bg-space-bg/70 border border-space-border text-text-primary text-sm outline-none focus:border-gold-primary focus:ring-2 focus:ring-gold-primary/20"
+              style={{ flex: 1, padding: '0.7rem 1rem', borderRadius: '10px', background: 'rgba(15,23,42,0.8)', border: '1px solid var(--glass-border)', color: '#fff', fontSize: '0.9rem', outline: 'none' }}
             />
-            <button
-              type="submit"
-              disabled={loading || !question.trim()}
-              className="btn-gold flex items-center justify-center gap-2 !py-3 sm:w-36 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              <i className="fas fa-paper-plane" />Ask
+            <button type="submit" className="compare-btn" disabled={loading || !question.trim()} style={{ whiteSpace: 'nowrap' }}>
+              <i className="fas fa-paper-plane" /> Ask
             </button>
           </form>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Suggested questions</p>
-          {prompts.map((prompt) => (
-            <button
-              type="button"
-              key={prompt}
-              onClick={() => sendQuestion(prompt)}
-              disabled={loading}
-              className="w-full text-left p-3 rounded-xl border border-space-border bg-space-bg/40 text-sm text-text-secondary hover:text-gold-accent hover:border-gold-primary/40 transition-all disabled:opacity-60"
-            >
-              <i className="fas fa-lightbulb mr-2 text-gold-primary" />{prompt}
-            </button>
-          ))}
+        <div className="input-group" style={{ marginTop: '0.5rem' }}>
+          <label style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', fontFamily: 'Inter', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Suggested questions
+          </label>
+          <div className="category-buttons" style={{ justifyContent: 'flex-start', flexDirection: 'column', gap: '0.5rem' }}>
+            {prompts.map((prompt) => (
+              <button
+                type="button"
+                key={prompt}
+                className="category-btn"
+                onClick={() => sendQuestion(prompt)}
+                disabled={loading}
+                style={{ width: '100%', justifyContent: 'flex-start', textAlign: 'left' }}
+              >
+                <i className="fas fa-lightbulb" /><span>{prompt}</span>
+              </button>
+            ))}
+          </div>
           {error && (
-            <div className="p-3 rounded-xl bg-accent-red/10 border border-accent-red/30 text-red-300 text-sm">
-              <i className="fas fa-exclamation-triangle mr-2" />{error}
+            <div className="empty-state" style={{ marginTop: '0.75rem', padding: '0.75rem' }}>
+              <p style={{ color: '#fca5a5', fontSize: '0.85rem' }}>{error}</p>
             </div>
           )}
         </div>

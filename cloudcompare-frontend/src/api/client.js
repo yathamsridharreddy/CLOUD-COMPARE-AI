@@ -1,11 +1,55 @@
 import axios from 'axios'
+
+// In production (Vercel) set the VITE_API_BASE env var to your Render backend URL,
+// e.g. https://cloudcompare-ai-backend.onrender.com  (no trailing slash).
+// We serve a runtime config on S3, so we honour it first if present.
 const runtimeConfig = window.__CLOUDCOMPARE_CONFIG__ || {}
 const API_BASE = (runtimeConfig.API_BASE || import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
-const api = axios.create({ baseURL: `${API_BASE}/api`, headers: { 'Content-Type': 'application/json' }, timeout: 30000 })
-api.interceptors.request.use((config) => { const token = localStorage.getItem('token'); if (token) config.headers.Authorization = `Bearer ${token}`; return config })
-export const authApi = { login: (e,p) => api.post('/auth/login',{email:e,password:p}), signup: (n,e,p) => api.post('/auth/signup',{name:n,email:e,password:p}) }
-export const cloudApi = { compare: (p) => api.post('/compare',p), getServiceTypes: (c) => api.get(`/service-types/${c}`), getRegions: () => api.get('/regions') }
-export const aiApi = { compareTools: (purpose) => api.post('/ai-compare',{purpose}), nlpCompare: (query) => api.post('/nlp-compare',{query}) }
-export const chatApi = { cloud: (q,c={}) => api.post('/chat/cloud',{question:q,cloudContext:c}), aiTools: (q,c={}) => api.post('/chat/ai-tools',{question:q,aiToolsContext:c}) }
-export const healthApi = { check: () => api.get('/test') }
+
+const api = axios.create({
+  baseURL: `${API_BASE}/api`,
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 30000
+})
+
+// Attach JWT token to every request if available
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// ─── Auth ──────────────────────────────────────────────────────────────────
+export const authApi = {
+  login:  (email, password)         => api.post('/auth/login',  { email, password }),
+  signup: (name, email, password)   => api.post('/auth/signup', { name, email, password })
+}
+
+// ─── Cloud Compare ─────────────────────────────────────────────────────────
+export const cloudApi = {
+  compare:        (params)   => api.post('/compare', params),
+  getServiceTypes:(category) => api.get(`/service-types/${category}`),
+  getRegions:     ()         => api.get('/regions')
+}
+
+// ─── AI Tools ──────────────────────────────────────────────────────────────
+export const aiApi = {
+  compareTools: (purpose) => api.post('/ai-compare',   { purpose }),
+  nlpCompare:   (query)   => api.post('/nlp-compare',  { query })
+}
+
+// ─── Chatbot Assistants ────────────────────────────────────────────────────
+export const chatApi = {
+  cloud:   (question, cloudContext = {})    => api.post('/chat/cloud',    { question, cloudContext }),
+  aiTools: (question, aiToolsContext = {}) => api.post('/chat/ai-tools', { question, aiToolsContext })
+}
+
+// ─── Health ────────────────────────────────────────────────────────────────
+// Spring Boot serves GET /api/test; the Python mock also exposes /api/health.
+export const healthApi = {
+  check: () => api.get('/test')
+}
+
 export default api

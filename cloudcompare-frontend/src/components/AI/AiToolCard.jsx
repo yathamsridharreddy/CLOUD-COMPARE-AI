@@ -1,54 +1,44 @@
 export default function AiToolCard({ tool, index }) {
-  const scoreColor = tool.score >= 9 ? 'text-accent-green' : tool.score >= 8 ? 'text-gold-accent' : 'text-accent-blue'
+  const scoreColor = tool.score >= 9 ? '#22c55e' : tool.score >= 8 ? '#fbbf24' : '#3b82f6'
 
   return (
-    <div
-      className="glass-card p-5 animate-fade-in-up"
-      style={{ animationDelay: `${index * 120}ms` }}
-    >
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gold-primary/20 to-gold-accent/10 flex items-center justify-center">
-            <i className="fas fa-robot text-gold-primary" />
-          </div>
-          <div>
-            <h3 className="font-bold text-text-primary text-sm">{tool.tool_name || tool.toolName}</h3>
-            <span className="text-xs text-text-muted">{tool.provider}</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-gold-primary/15 text-gold-accent text-xs font-bold">
-          #{tool.rank || index + 1}
-        </div>
+    <div className="recommendation-card animate-fade-in-up">
+      <div className="recommendation-badge" style={{ background: 'rgba(138,43,226,0.15)', color: '#a78bfa', border: '1px solid rgba(138,43,226,0.3)' }}>
+        <i className="fas fa-robot" />
+        <span>#{tool.rank || index + 1} · {tool.provider}</span>
       </div>
 
-      {/* Score + Model */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="p-2.5 rounded-lg bg-space-bg/50 text-center">
-          <div className="text-xs text-text-muted mb-1">AI Score</div>
-          <div className={`text-xl font-bold ${scoreColor}`}>{Number(tool.score).toFixed(1)}</div>
+      <div className="recommendation-content">
+        <div className="recommendation-platform">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: 'rgba(138,43,226,0.15)', color: '#a78bfa' }}>
+            <i className="fas fa-robot" />
+          </div>
+          <h3>{tool.tool_name || tool.toolName}</h3>
         </div>
-        <div className="p-2.5 rounded-lg bg-space-bg/50 text-center">
-          <div className="text-xs text-text-muted mb-1">Model</div>
-          <div className="text-xs font-mono text-text-secondary truncate" title={tool.model_number || tool.modelNumber}>
-            {tool.model_number || tool.modelNumber || '—'}
+
+        <div className="recommendation-stats">
+          <div className="stat-item">
+            <span className="stat-label">AI Score</span>
+            <span className="stat-value" style={{ color: scoreColor }}>{Number(tool.score).toFixed(1)}</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">Model</span>
+            <span className="stat-value" style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+              {tool.model_number || tool.modelNumber || '—'}
+            </span>
           </div>
         </div>
-      </div>
 
-      {/* Pricing */}
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs px-2.5 py-1 rounded-md bg-accent-green/10 text-accent-green border border-accent-green/20">
+        <span className="text-xs px-2.5 py-1 rounded-md" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', alignSelf: 'flex-start' }}>
           <i className="fas fa-tag mr-1" />{tool.pricing || 'Contact'}
         </span>
-      </div>
 
-      {/* Description */}
-      {tool.description && (
-        <p className="text-xs text-text-secondary leading-relaxed line-clamp-2">
-          {tool.description}
-        </p>
-      )}
+        {tool.description && (
+          <p className="text-xs leading-relaxed" style={{ color: '#94a3b8' }}>
+            {tool.description}
+          </p>
+        )}
+      </div>
     </div>
   )
 }

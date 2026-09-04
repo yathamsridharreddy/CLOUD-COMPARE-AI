@@ -11,12 +11,10 @@ export default function ResourceInputs({ values, onChange }) {
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+    <div className="input-row">
       {fields.map((f) => (
-        <div key={f.id}>
-          <label className="block text-xs font-medium text-text-secondary mb-2">
-            <i className={`fas ${f.icon} mr-1 text-gold-primary`} />{f.label}
-          </label>
+        <div className="input-group" key={f.id}>
+          <label><i className={`fas ${f.icon}`} /> {f.label}</label>
           <input
             id={`input-${f.id}`}
             type="number"
@@ -25,8 +23,6 @@ export default function ResourceInputs({ values, onChange }) {
             placeholder={f.placeholder}
             min={f.min}
             max={f.max}
-            className="w-full px-3 py-2.5 rounded-xl bg-space-bg/50 border border-space-border text-text-primary text-sm
-                       placeholder:text-text-muted focus:border-gold-primary focus:outline-none focus:ring-2 focus:ring-gold-primary/20 transition-all"
           />
         </div>
       ))}
