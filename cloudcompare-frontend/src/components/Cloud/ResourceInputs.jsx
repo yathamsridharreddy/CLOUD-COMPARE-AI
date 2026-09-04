@@ -26,7 +26,7 @@ export default function ResourceInputs({ values, onChange }) {
             min={f.min}
             max={f.max}
             className="w-full px-3 py-2.5 rounded-xl bg-space-bg/50 border border-space-border text-text-primary text-sm
-                       placeholder-text-muted focus:border-gold-primary focus:outline-none focus:ring-2 focus:ring-gold-primary/20 transition-all"
+                       placeholder:text-text-muted focus:border-gold-primary focus:outline-none focus:ring-2 focus:ring-gold-primary/20 transition-all"
           />
         </div>
       ))}
