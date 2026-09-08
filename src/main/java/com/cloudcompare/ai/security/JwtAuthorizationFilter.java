@@ -25,6 +25,14 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        // A liveness probe must not parse tokens or load a user from the database,
+        // even if a caller happens to include an Authorization header.
+        return "GET".equals(request.getMethod())
+                && (request.getContextPath() + "/health").equals(request.getRequestURI());
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         final String authHeader = request.getHeader("Authorization");
         String username = null;

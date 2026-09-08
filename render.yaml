@@ -9,7 +9,7 @@ services:
     dockerfilePath: ./Dockerfile.render
     plan: free
     autoDeploy: true
-    healthCheckPath: /api/test
+    healthCheckPath: /health
     envVars:
       - key: JWT_SECRET
         sync: false

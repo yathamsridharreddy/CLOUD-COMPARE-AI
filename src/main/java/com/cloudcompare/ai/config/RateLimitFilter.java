@@ -37,8 +37,12 @@ public class RateLimitFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         String path = httpRequest.getRequestURI();
 
-        // Only rate-limit /api/** endpoints
-        if (!path.startsWith("/api")) {
+        // Liveness must never read or consume an IP's API quota. Keep this
+        // exemption explicit if the rate-limited path scope changes later.
+        boolean healthCheck = "GET".equals(httpRequest.getMethod())
+                && (httpRequest.getContextPath() + "/health").equals(path);
+        // All existing /api routes (including /api/test) retain their limits.
+        if (healthCheck || !path.startsWith("/api")) {
             chain.doFilter(request, response);
             return;
         }

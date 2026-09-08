@@ -62,6 +62,22 @@ class RateLimitFilterTest {
     }
 
     @Test
+    void testHealthDoesNotReadOrAllocateAnIpQuota() throws Exception {
+        when(request.getMethod()).thenReturn("GET");
+        when(request.getContextPath()).thenReturn("");
+        when(request.getRequestURI()).thenReturn("/health");
+
+        for (int i = 0; i < 100; i++) {
+            rateLimitFilter.doFilter(request, response, filterChain);
+        }
+
+        verify(filterChain, times(100)).doFilter(request, response);
+        verify(request, never()).getHeader("X-Forwarded-For");
+        verify(request, never()).getRemoteAddr();
+        verify(response, never()).setStatus(429);
+    }
+
+    @Test
     void testRateLimitExceeded() throws Exception {
         when(request.getRequestURI()).thenReturn("/api/compare");
         when(request.getRemoteAddr()).thenReturn("1.2.3.4");
