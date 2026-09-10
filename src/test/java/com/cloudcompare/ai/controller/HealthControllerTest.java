@@ -78,6 +78,15 @@ class HealthControllerTest {
     }
 
     @Test
+    void privacyNoticeIsPublicWithoutAUserLookup() throws Exception {
+        mockMvc.perform(fromClient(get("/privacy-policy.html")))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(containsString("Privacy Policy")));
+        verifyNoInteractions(jwtUtil, userDetailsService, userRepository);
+    }
+
+    @Test
     void healthIsPublicAndLightweight() throws Exception {
         mockMvc.perform(fromClient(get("/health")))
                 .andExpect(status().isOk())

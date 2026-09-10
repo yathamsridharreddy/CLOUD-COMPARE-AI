@@ -46,6 +46,7 @@ public class SecurityConfig {
     private static final String[] PUBLIC_STATIC_RESOURCES = {
             "/",
             "/index.html",
+            "/privacy-policy.html",
             "/login.html",
             "/signup.html",
             "/dashboard.html",

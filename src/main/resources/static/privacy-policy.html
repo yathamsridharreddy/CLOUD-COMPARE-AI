@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <meta name="description" content="How CloudCompare AI handles account information, comparison requests and optional Gmail password-recovery email.">
+    <title>Privacy Policy | CloudCompare AI</title>
+    <style>
+        :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #e5eaf3; background: #080e20; }
+        * { box-sizing: border-box; }
+        body { margin: 0; line-height: 1.75; }
+        header, main, footer { width: min(100% - 40px, 850px); margin: auto; }
+        header { padding: 28px 0; border-bottom: 1px solid #28344e; }
+        a { color: #83e6d1; text-underline-offset: 3px; overflow-wrap: anywhere; }
+        a:focus-visible { outline: 2px solid #83e6d1; outline-offset: 4px; }
+        .brand { font-size: 18px; font-weight: 700; text-decoration: none; color: #f1f5fb; }
+        main { padding: 36px 0; }
+        h1 { font-size: clamp(30px, 5vw, 42px); line-height: 1.2; margin: 0 0 12px; letter-spacing: -1px; }
+        h2 { font-size: 21px; line-height: 1.4; margin: 34px 0 12px; color: #f1f5fb; }
+        p, li { font-size: 15px; }
+        li { margin-bottom: 9px; }
+        .updated, footer { color: #a9b5cd; font-size: 13px; }
+        .summary { padding: 18px 22px; border: 1px solid #315c58; border-radius: 12px; background: #102623; }
+        code { color: #c1eddf; }
+        footer { padding: 24px 0 40px; border-top: 1px solid #28344e; }
+    </style>
+</head>
+<body>
+<header><a class="brand" href="https://cloud-compareai.vercel.app/">CloudCompare AI</a></header>
+<main>
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: 11 September 2026</p>
+    <p>This notice describes information handled by CloudCompare AI at <a href="https://cloud-compareai.vercel.app/">cloud-compareai.vercel.app</a>, including the optional CloudCompare AI Password Reset email integration. Questions and privacy requests can be sent to the operator at <a href="mailto:yathamsridharreddy99@gmail.com">yathamsridharreddy99@gmail.com</a>.</p>
+    <p class="summary">Account recovery sends a reset link, not an existing or new password. When the Gmail integration is enabled, only the operator authorizes a sending mailbox. Application users are not asked to grant access to their Gmail accounts.</p>
+
+    <h2>1. Information handled</h2>
+    <ul>
+        <li><strong>Account information:</strong> the name and email address provided at registration and a BCrypt password hash used for sign-in. Passwords are processed when you register, sign in or change them; the account database stores a hash rather than the plaintext password.</li>
+        <li><strong>Comparison and chat requests:</strong> the categories, service types, resource preferences, free-text requests, questions and context submitted to use the cloud-comparison or AI features.</li>
+        <li><strong>Browser storage:</strong> login tokens, the displayed account name and preferences such as the selected theme may be stored in your browser's local storage. Signing out removes application login state; browser controls can also clear locally stored information.</li>
+        <li><strong>Technical information:</strong> hosting services process request information such as IP addresses, requested URLs and browser details. The application uses IP information for rate limiting, and diagnostic logs may include account identifiers, request details and errors.</li>
+        <li><strong>Password recovery, when enabled:</strong> the registered email address, a hashed reset-token identifier, its account association, creation/expiry/use timestamps and an account credential version used to invalidate older login tokens.</li>
+    </ul>
+
+    <h2>2. Why information is used</h2>
+    <p>Information is used to create and authenticate accounts, provide comparisons and responses, deliver requested account-recovery messages, apply security and abuse controls, diagnose faults and answer support or privacy requests. Do not submit passwords, API keys, financial records or other sensitive information in comparison or chat prompts.</p>
+
+    <h2>3. Google and Gmail integration</h2>
+    <p>If the operator enables Gmail password-recovery email, the operator authorizes a Gmail sending account using OAuth and the <code>gmail.send</code> permission. The integration sends user-requested reset links and password-change notifications. It does not request permission to read the sender's inbox or contacts, and recipients do not need to authorize Google access.</p>
+    <p>Sender OAuth credentials are configured privately on the backend. Access tokens are held in server memory; sender credentials are not embedded in frontend files. The raw reset link is included in the email, so Google and the recipient's email provider process that message. Copies may remain in the sender's Sent folder and the recipient's mailbox under those accounts' and providers' retention settings.</p>
+    <p>Google authorization information is used for the mail integration, not advertising or sale of personal information, and is not sent by that integration to the AI provider. CloudCompare AI's use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements.</p>
+    <p>The sender can revoke the authorization in their Google Account's third-party connections settings. Revocation stops the application from sending further Gmail messages with that grant; it does not automatically delete the CloudCompare account or messages already delivered.</p>
+
+    <h2>4. Service providers and external content</h2>
+    <p>The application uses Vercel for its website and API forwarding, and Render for backend hosting and database services. When live AI functionality is enabled, prompts and relevant input or context may be processed by Groq to generate results. Gmail is used for recovery mail only when that integration is configured. Providers handle the information necessary to deliver their services under their own terms and policies, and processing locations may differ from your location.</p>
+    <p>Some application pages load fonts, icons, images or libraries from services such as Google Fonts, content-delivery networks and Wikimedia. Those requests disclose normal connection information to the relevant providers. This privacy page itself does not require third-party scripts or a login. Links to other websites lead to services governed by their own privacy notices.</p>
+
+    <h2>5. Storage and retention</h2>
+    <p>Account records are retained while needed to operate the account and service. Contact the operator about correction or deletion. Retention of technical logs, backups and hosting data depends on the configured services and applicable obligations; this notice does not promise a fixed deletion schedule for provider-managed records.</p>
+    <p>When recovery is enabled, reset links expire after 15 minutes and become unusable after a successful reset. The application database stores only the token hash, not the usable bearer token. Older expired token records are cleaned up during subsequent reset activity. Delivered email copies are separate from these application records and are controlled by the relevant mail accounts and providers.</p>
+    <p>OAuth sender credentials are retained in backend configuration until removed or replaced; Google can revoke or expire the authorization. Hosting or free-tier retention limits may also remove service data. Do not rely on the application as permanent storage for important information.</p>
+
+    <h2>6. Security and your choices</h2>
+    <p>The production service uses HTTPS, password hashing and access controls. Recovery, when enabled, uses random, expiring, one-time tokens and invalidates older login credentials after a password reset. No online service can guarantee absolute security. Keep reset links and login tokens private, and do not send passwords or OAuth secrets to support.</p>
+    <p>You can stop using the service, sign out, clear its browser storage, revoke a sender's Google authorization, and contact the operator to request access to, correction of or deletion of account information. Reasonable verification of account ownership may be needed before handling a request. Some information may need to be retained for security, legal obligations or provider-managed backups.</p>
+
+    <h2>7. Contact and changes</h2>
+    <p>For privacy questions, concerns or account-data requests, email <a href="mailto:yathamsridharreddy99@gmail.com">yathamsridharreddy99@gmail.com</a>. This notice may be updated when the service or its data handling changes. The date at the top identifies the latest revision.</p>
+</main>
+<footer><a href="https://cloud-compareai.vercel.app/">Back to CloudCompare AI</a></footer>
+</body>
+</html>
