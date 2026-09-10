@@ -344,15 +344,18 @@
             const btn = document.getElementById('resetBtn');
             const statusMsg = document.getElementById('resetStatusMsg');
             const email = document.getElementById('resetEmail').value.trim();
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; btn.disabled = true; statusMsg.style.display = 'none';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; btn.disabled = true;
+            statusMsg.className = 'alert'; statusMsg.style.display = 'none';
             try {
                 const response = await fetch('/api/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
-                if (response.status === 404 || response.ok) {
-                    statusMsg.textContent = 'If an account exists with this email, you will receive a password reset link.';
+                const data = await response.json().catch(() => ({}));
+                if (response.status === 202) {
+                    statusMsg.textContent = data.message || 'If an eligible account exists, a reset link will be sent. Check your inbox and spam folder.';
                     statusMsg.classList.add('alert-success'); statusMsg.style.display = 'block';
-                    setTimeout(() => closeForgotPasswordModal(), 3000);
                 } else {
-                    statusMsg.textContent = 'Failed to process request. Please try again.';
+                    statusMsg.textContent = response.status === 429
+                        ? 'Too many requests. Please wait before requesting another reset link.'
+                        : (data.error || data.message || 'Password reset email is currently unavailable. Please try again later.');
                     statusMsg.classList.add('alert-error'); statusMsg.style.display = 'block';
                 }
             } catch (err) {

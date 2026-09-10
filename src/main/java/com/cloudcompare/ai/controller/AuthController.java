@@ -4,13 +4,13 @@ import com.cloudcompare.ai.dto.LoginRequest;
 import com.cloudcompare.ai.dto.SignupRequest;
 import com.cloudcompare.ai.entity.UserEntity;
 import com.cloudcompare.ai.repository.UserRepository;
+import com.cloudcompare.ai.security.AccountUserDetails;
 import com.cloudcompare.ai.security.JwtUtil;
 import com.cloudcompare.ai.service.AuthService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
 import java.util.Map;
 
 @RestController
@@ -69,10 +68,7 @@ public class AuthController {
             }
 
             // Generate JWT token
-            UserDetails userDetails = User.withUsername(user.getEmail())
-                    .password(user.getPassword())
-                    .authorities(new ArrayList<>())
-                    .build();
+            UserDetails userDetails = new AccountUserDetails(user);
             String jwt = jwtUtil.generateToken(userDetails);
 
             logger.info("Login successful for: {}", loginRequest.getEmail());

@@ -26,10 +26,12 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        // A liveness probe must not parse tokens or load a user from the database,
-        // even if a caller happens to include an Authorization header.
-        return "GET".equals(request.getMethod())
-                && (request.getContextPath() + "/health").equals(request.getRequestURI());
+        // Liveness must never inspect credentials. Password recovery establishes
+        // identity using its single-use reset token, not an old login JWT.
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        return ("GET".equals(request.getMethod()) && "/health".equals(path))
+                || ("POST".equals(request.getMethod())
+                    && ("/api/auth/forgot-password".equals(path) || "/api/auth/reset-password".equals(path)));
     }
 
     @Override

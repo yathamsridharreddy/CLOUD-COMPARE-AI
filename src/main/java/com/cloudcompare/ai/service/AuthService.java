@@ -4,11 +4,11 @@ import com.cloudcompare.ai.dto.SignupRequest;
 import com.cloudcompare.ai.entity.UserEntity;
 import com.cloudcompare.ai.exception.BusinessException;
 import com.cloudcompare.ai.repository.UserRepository;
+import com.cloudcompare.ai.security.PasswordPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.regex.Pattern;
 
 @Service
 public class AuthService {
@@ -21,9 +21,6 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    private static final Pattern PASSWORD_PATTERN = Pattern
-            .compile("^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,}$");
-
     @Transactional
     public UserEntity registerUser(SignupRequest signupRequest) {
         // Elite Backend Validation
@@ -31,10 +28,7 @@ public class AuthService {
             throw new BusinessException("CRITICAL: Email synchronization failed - Account already exists.");
         }
 
-        if (!PASSWORD_PATTERN.matcher(signupRequest.getPassword()).matches()) {
-            throw new BusinessException(
-                    "SECURITY ALERT: Password does not meet the vault-grade complexity requirements.");
-        }
+        PasswordPolicy.validate(signupRequest.getPassword());
 
         UserEntity user = new UserEntity();
         user.setName(signupRequest.getName());

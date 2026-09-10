@@ -55,6 +55,17 @@ class JwtAuthorizationFilterTest {
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/auth/forgot-password", "/api/auth/reset-password"})
+    void recoveryRequestsDoNotDependOnAnOldLoginToken(String path) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", path);
+        request.addHeader("Authorization", "Bearer malformed");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(request, response, chain);
+        verify(chain).doFilter(request, response);
+        verifyNoInteractions(jwtUtil, userDetailsService);
+    }
+
     @Test
     void healthBypassAlsoWorksWithAContextPathAndQueryString() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/application/health");

@@ -49,6 +49,9 @@ public class SecurityConfig {
             "/privacy-policy.html",
             "/login.html",
             "/signup.html",
+            "/reset-password.html",
+            "/password-reset.js",
+            "/password-reset.css",
             "/dashboard.html",
             "/style.css",
             "/script.js",
@@ -81,7 +84,18 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class);
 
         // Allow H2 console frames (dev only)
-        http.headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable));
+        http.headers(headers -> headers
+                .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
+                .addHeaderWriter((request, response) -> {
+                    if ((request.getContextPath() + "/reset-password.html").equals(request.getRequestURI())) {
+                        response.setHeader("Referrer-Policy", "no-referrer");
+                        response.setHeader("Cache-Control", "no-store");
+                        response.setHeader("X-Frame-Options", "DENY");
+                        response.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; "
+                                + "style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; "
+                                + "frame-ancestors 'none'; form-action 'self'");
+                    }
+                }));
 
         return http.build();
     }

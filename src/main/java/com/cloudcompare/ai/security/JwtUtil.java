@@ -51,12 +51,9 @@ public class JwtUtil {
                 .getBody();
     }
 
-    private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
-    }
-
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
+        claims.put("cv", credentialVersion(userDetails));
         return createToken(claims, userDetails.getUsername());
     }
 
@@ -70,8 +67,17 @@ public class JwtUtil {
                 .compact();
     }
 
+    private int credentialVersion(UserDetails userDetails) {
+        return userDetails instanceof AccountUserDetails account ? account.getCredentialVersion() : 0;
+    }
+
     public boolean validateToken(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        Claims claims = extractAllClaims(token);
+        Integer issuedVersion = claims.get("cv", Integer.class);
+        // Older tokens omitted cv. Keep them valid for untouched accounts only.
+        int tokenVersion = issuedVersion == null ? 0 : issuedVersion;
+        return userDetails.getUsername().equals(claims.getSubject())
+                && claims.getExpiration() != null && claims.getExpiration().after(new Date())
+                && tokenVersion == credentialVersion(userDetails);
     }
 }
