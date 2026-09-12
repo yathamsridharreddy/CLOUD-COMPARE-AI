@@ -123,10 +123,34 @@ curl -s https://cloudcompare-ai-api.onrender.com/api/test
   check the browser's network tab for a CORS error and confirm
   `CORS_ALLOWED_ORIGINS` matches the deployed origin.
 - **Render free tier** sleeps after ~15 min idle; the first request may take a
-  few seconds to spin up.
-- **Health check path:** Render polls `/api/test`, which is public and returns
-  `200 OK`. If this endpoint ever changes, update `healthCheckPath` in
+  30-90 second spin up (the "waking up" page).
+- **Health check path:** Render polls `/health` (public, not rate-limited,
+  returns `200 OK`). If this endpoint ever changes, update `healthCheckPath` in
   `render.yaml`.
+
+## Keeping the backend awake (cold starts)
+
+The free Render web service sleeps after ~15 minutes without traffic. Two ways
+to handle it:
+
+**Option A — Truly always-on (recommended for a live site):**
+Upgrade the `cloudcompare-ai-api` service to the **Starter plan ($7/month)** in
+Render dashboard → service → Settings → Instance Type. Paid instances never
+sleep; no pinging needed. Note the free workspace is capped at 750 instance
+hours/month, so a pinged-always-on free service uses almost all of it.
+
+**Option B — Stay free (mitigation, not a guarantee):**
+The repo ships `.github/workflows/render-keepalive.yml`, which pings
+`https://cloudcompare-ai-api.onrender.com/health` **every 5 minutes** — safely
+inside the 15-minute sleep window. It pings `/health` (not `/api/test`) so the
+probes never consume the rate-limit quota.
+Caveats:
+- GitHub Actions cron runs can occasionally be delayed, so a cold start can
+  still happen rarely (after deploys it is guaranteed once, by design).
+- For extra reliability, add a free [UptimeRobot](https://uptimerobot.com)
+  HTTP monitor on the same `/health` URL with a 5-minute interval.
+- `Dockerfile.render` already uses `-XX:TieredStopAtLevel=1` so the JVM
+  starts faster and the "waking up" page shows for less time.
 
 ## Local development (unchanged)
 
