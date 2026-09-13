@@ -6,6 +6,34 @@
     <meta name="google-site-verification" content="cV18Eqt6coCSPoR8AVYBK7imhcYNjjZTx0UdmIAGo5E" />
     <title>CloudCompare AI - Smart Cloud & AI Discovery</title>
     <meta name="description" content="Discover and compare leading AI tools, cloud platforms, and modern software solutions in one intelligent platform.">
+    <meta name="theme-color" content="#030014">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="CloudCompare AI">
+    <meta property="og:title" content="CloudCompare AI - Smart Cloud & AI Discovery">
+    <meta property="og:description" content="Compare AWS, Azure, Google Cloud, Oracle Cloud, and Alibaba Cloud on cost, performance, and region — with AI-powered tool rankings and a built-in AI chat assistant.">
+    <meta property="og:url" content="https://cloud-compareai.vercel.app/">
+    <meta property="og:image" content="https://cloud-compareai.vercel.app/assets/og-image.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CloudCompare AI - Smart Cloud & AI Discovery">
+    <meta name="twitter:description" content="Compare 5 major clouds and discover ranked AI tool recommendations with an AI chat assistant.">
+    <meta name="twitter:image" content="https://cloud-compareai.vercel.app/assets/og-image.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://upload.wikimedia.org">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "CloudCompare AI",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "url": "https://cloud-compareai.vercel.app",
+        "description": "Compare cloud services across AWS, Azure, Google Cloud, Oracle Cloud, and Alibaba Cloud, and get ranked AI tool recommendations with an AI chat assistant.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -33,7 +61,8 @@
         .stars { position: fixed; inset: 0; z-index: -1; background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 50px 50px; opacity: 0.1; }
 
         /* Navbar */
-        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 4rem; position: relative; z-index: 10; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 4rem; position: fixed; top: 0; left: 0; right: 0; z-index: 100; transition: background 0.3s ease, box-shadow 0.3s ease, padding 0.3s ease; }
+        .navbar.scrolled { background: rgba(3, 0, 20, 0.8); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 8px 30px rgba(0,0,0,0.45); border-bottom: 1px solid rgba(138, 43, 226, 0.18); padding-top: 0.85rem; padding-bottom: 0.85rem; }
         .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: white; font-weight: 700; font-size: 1.2rem; }
         .logo-icon { width: 32px; height: 32px; background: var(--gradient-btn); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
         
@@ -45,7 +74,7 @@
         .btn-primary:hover { box-shadow: 0 0 20px rgba(138, 43, 226, 0.4); transform: translateY(-1px); }
 
         /* Hero Section */
-        .hero { display: flex; justify-content: space-between; padding: 4rem 4rem; position: relative; min-height: calc(100vh - 200px); }
+        .hero { display: flex; justify-content: space-between; padding: 7.5rem 4rem 4rem; position: relative; min-height: calc(100vh - 200px); }
         
         /* Left Column - Content */
         .hero-content { flex: 1; max-width: 600px; z-index: 10; display: flex; flex-direction: column; justify-content: center; }
@@ -123,6 +152,44 @@
 .floating-logo img { transition: transform 0.3s ease; }
 .floating-logo:hover img { transform: scale(1.12); }
 
+        /* Scroll reveal */
+        .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.7s ease, transform 0.7s ease; }
+        .reveal.visible { opacity: 1; transform: none; }
+
+        /* Sections */
+        .section { position: relative; z-index: 10; width: calc(100% - 4rem); max-width: 1100px; margin: 0 auto 2.5rem; }
+        .section-head { text-align: center; margin-bottom: 2rem; }
+        .section-head .kicker { color: var(--secondary); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; }
+        .section-head h2 { font-size: 2.4rem; font-weight: 800; margin-top: 0.5rem; letter-spacing: -0.02em; color: #fff; }
+        .section-head p { color: var(--text-gray); margin-top: 0.75rem; max-width: 640px; margin-left: auto; margin-right: auto; line-height: 1.65; }
+
+        /* Feature cards */
+        .features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+        .feature-card { background: rgba(13, 17, 30, 0.7); border: 1px solid rgba(138, 43, 226, 0.22); border-radius: 20px; padding: 1.75rem; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: transform 0.3s ease, border-color 0.3s ease; }
+        .feature-card:hover { transform: translateY(-4px); border-color: rgba(0, 210, 255, 0.45); }
+        .feature-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 1rem; }
+        .feature-card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff; }
+        .feature-card p { color: var(--text-gray); font-size: 0.92rem; line-height: 1.65; }
+
+        /* How it works */
+        .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+        .step { background: rgba(13, 17, 30, 0.7); border: 1px solid rgba(138, 43, 226, 0.22); border-radius: 20px; padding: 1.75rem; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+        .step-num { width: 44px; height: 44px; border-radius: 50%; background: var(--gradient-btn); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.05rem; margin-bottom: 1rem; }
+        .step h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff; }
+        .step p { color: var(--text-gray); font-size: 0.92rem; line-height: 1.65; }
+
+        /* Final CTA */
+        .cta-banner { text-align: center; background: linear-gradient(135deg, rgba(0, 210, 255, 0.12), rgba(138, 43, 226, 0.16)); border: 1px solid rgba(138, 43, 226, 0.35); border-radius: 24px; padding: 3rem 2rem; }
+        .cta-banner h2 { font-size: 2.2rem; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+        .cta-banner p { color: var(--text-gray); margin: 0.75rem auto 1.75rem; max-width: 560px; line-height: 1.65; }
+
+        /* Reduced motion: freeze the orbit into a static circle, disable reveals */
+        @media (prefers-reduced-motion: reduce) {
+            .orbit-slot .floating-logo { animation: none; transform: translate(-50%, -50%) rotate(calc(var(--i) * 45deg)) translateY(var(--orbit-r)) rotate(calc(var(--i) * -45deg)); }
+            .orbital-ring { animation: none; }
+            .reveal { opacity: 1; transform: none; transition: none; }
+        }
+
         @keyframes float {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-15px); }
@@ -146,7 +213,7 @@
         .stat-text p { color: var(--text-gray); font-size: 0.85rem; }
 
         @media (max-width: 1024px) {
-            .hero { flex-direction: column; padding: 2rem; }
+            .hero { flex-direction: column; padding: 6rem 2rem 2rem; }
             .navbar, .stats-bar-wrapper { padding: 1.5rem 2rem; }
     .hero-graphics { min-height: 400px; margin-top: 3rem; --orbit-r: 150px; }
     .orbital-ring { width: 500px; height: 500px; right: -50px; margin-top: -250px; }
@@ -158,6 +225,9 @@
     .stats-bar { grid-template-columns: 1fr; gap: 1.5rem; }
     .hero-actions { flex-direction: column; }
     .hero-graphics { --orbit-r: 105px; }
+    .features-grid, .steps { grid-template-columns: 1fr; }
+    .section-head h2 { font-size: 1.8rem; }
+    .cta-banner h2 { font-size: 1.7rem; }
 }
     </style>
 </head>
@@ -206,7 +276,7 @@
     </div>
     </main>
 
-    <div class="stats-bar-wrapper">
+    <div class="stats-bar-wrapper reveal">
         <div class="stats-bar">
             <div class="stat-item">
                 <div class="stat-icon icon-purple"><i class="fas fa-th-large"></i></div>
@@ -238,7 +308,61 @@
             </div>
         </div>
     </div>
-    <section aria-labelledby="about-app-title" style="position: relative; z-index: 10; width: calc(100% - 4rem); max-width: 1100px; margin: 0 auto 2rem; padding: 2rem; border: 1px solid rgba(138, 43, 226, 0.25); border-radius: 20px; background: rgba(13, 17, 30, 0.8); color: #d1d5db; line-height: 1.75;">
+    <section id="features" class="section reveal" aria-labelledby="features-title">
+        <div class="section-head">
+            <div class="kicker">What you can do</div>
+            <h2 id="features-title">Everything you need to choose with confidence</h2>
+            <p>One account, four ways to turn cloud and AI decisions into clear, ranked answers.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon icon-purple"><i class="fas fa-cloud"></i></div>
+                <h3>Multi-Cloud Comparison</h3>
+                <p>Enter your workload once and compare AWS, Azure, Google Cloud, Oracle Cloud, and Alibaba Cloud on estimated cost, performance, and regional availability — ranked for your exact needs.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon icon-blue"><i class="fas fa-robot"></i></div>
+                <h3>AI Tools by Purpose</h3>
+                <p>Describe what you are building — a coding assistant, an app, a marketing engine — and get a ranked shortlist of the best AI tools for the job, in plain language.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon icon-green"><i class="fas fa-comments"></i></div>
+                <h3>Dual AI Chatbot</h3>
+                <p>Two built-in assistants — Cloud Compare and AI Tools mode — answer follow-ups like "why is this the best for cost?" or "what is cheaper in another region?"</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon icon-pink"><i class="fas fa-chart-line"></i></div>
+                <h3>Instant Visual Reports</h3>
+                <p>Cost and performance charts, provider cards, and executive summaries generated in seconds — no spreadsheets, no guesswork.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" class="section reveal" aria-labelledby="how-title">
+        <div class="section-head">
+            <div class="kicker">How it works</div>
+            <h2 id="how-title">From question to answer in three steps</h2>
+        </div>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>Describe your workload</h3>
+                <p>Pick a service type and set vCPU, memory, and storage — or simply type your goal in plain language.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>Get ranked recommendations</h3>
+                <p>We compare providers on cost, performance, and region, then rank them so the best fit is obvious.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>Ask your AI architect</h3>
+                <p>Follow up in chat — why a pick, cheaper alternatives, or regional trade-offs — and refine until it is right.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="reveal" aria-labelledby="about-app-title" style="position: relative; z-index: 10; width: calc(100% - 4rem); max-width: 1100px; margin: 0 auto 2rem; padding: 2rem; border: 1px solid rgba(138, 43, 226, 0.25); border-radius: 20px; background: rgba(13, 17, 30, 0.8); color: #d1d5db; line-height: 1.75;">
         <h2 id="about-app-title" style="color: #fff; margin-bottom: 0.75rem;">About CloudCompare AI</h2>
         <p style="max-width: 820px;">CloudCompare AI is a multi-cloud decision platform. It analyzes cost, performance, and regional availability across AWS, Azure, Google Cloud, Oracle Cloud, and Alibaba Cloud, and evaluates leading AI tools for your specific use case — turning raw provider data into clear, ranked recommendations you can act on.</p>
         <p style="max-width: 820px; margin-top: 0.75rem;">The platform is built around verified access: every account signs in with email and password, and each request is protected by secure token-based authentication — keeping your usage private and your comparisons trustworthy.</p>
@@ -266,10 +390,43 @@
             </div>
         </div>
     </section>
+    <section class="section reveal" style="margin-bottom: 2.5rem;">
+        <div class="cta-banner">
+            <h2>Ready to make your next cloud decision with confidence?</h2>
+            <p>Create a free account and compare your first workload in under a minute.</p>
+            <a href="signup.html" class="btn btn-primary">Create Free Account &rarr;</a>
+        </div>
+    </section>
+
     <footer style="position: relative; z-index: 10; padding: 1rem 2rem 2rem; text-align: center; color: #a1a1aa; font-size: 0.85rem;">
         <a href="privacy-policy.html" style="color: #a5f3fc;">Privacy policy</a>
         <span aria-hidden="true"> &middot; </span>
         <a href="mailto:yathamsridharreddy99@gmail.com" style="color: #a5f3fc;">Contact</a>
     </footer>
+
+    <script>
+        (function () {
+            var navbar = document.querySelector('.navbar');
+            function onScroll() { navbar.classList.toggle('scrolled', window.scrollY > 40); }
+            window.addEventListener('scroll', onScroll, { passive: true });
+            onScroll();
+
+            var revealEls = document.querySelectorAll('.reveal');
+            var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (reduceMotion || !('IntersectionObserver' in window)) {
+                revealEls.forEach(function (el) { el.classList.add('visible'); });
+            } else {
+                var io = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('visible');
+                            io.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.15 });
+                revealEls.forEach(function (el) { io.observe(el); });
+            }
+        })();
+    </script>
 </body>
 </html>
