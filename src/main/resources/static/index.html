@@ -65,7 +65,7 @@
             position: absolute; width: 800px; height: 800px; border-radius: 50%;
             border: 2px solid rgba(0, 210, 255, 0.2);
             box-shadow: inset 0 0 50px rgba(138, 43, 226, 0.2), 0 0 100px rgba(0, 210, 255, 0.15);
-            right: -200px; top: 50%; transform: translateY(-50%);
+            right: -200px; top: 50%; margin-top: -400px; animation: ring-spin 80s linear infinite;
             border-top-color: rgba(138, 43, 226, 0.6);
             border-right-color: rgba(0, 210, 255, 0.6);
             z-index: 1;
@@ -107,6 +107,22 @@
 .logo-groq { width: 80px; height: 80px; bottom: 8%; right: 14%; animation-delay: 2.5s; }
 .logo-groq img { filter: brightness(0) invert(1) drop-shadow(0 0 8px rgba(255, 90, 0, 0.35)); padding: 12px; }
 
+/* Orbit: all logos circle the hero center, staying upright while rotating */
+.hero-graphics { --orbit-r: 250px; }
+.orbit-slot { position: absolute; top: 50%; left: 50%; width: 0; height: 0; z-index: 5; }
+.orbit-slot .floating-logo {
+    position: absolute; top: 0; left: 0;
+    animation: orbit-spin 36s linear infinite;
+    animation-delay: calc(var(--i) * -4.5s);
+}
+@keyframes orbit-spin {
+    from { transform: translate(-50%, -50%) rotate(0deg) translateY(var(--orbit-r)) rotate(0deg); }
+    to { transform: translate(-50%, -50%) rotate(360deg) translateY(var(--orbit-r)) rotate(-360deg); }
+}
+@keyframes ring-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.floating-logo img { transition: transform 0.3s ease; }
+.floating-logo:hover img { transform: scale(1.12); }
+
         @keyframes float {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-15px); }
@@ -132,16 +148,17 @@
         @media (max-width: 1024px) {
             .hero { flex-direction: column; padding: 2rem; }
             .navbar, .stats-bar-wrapper { padding: 1.5rem 2rem; }
-            .hero-graphics { min-height: 400px; margin-top: 3rem; }
-            .orbital-ring { width: 500px; height: 500px; right: -50px; }
+    .hero-graphics { min-height: 400px; margin-top: 3rem; --orbit-r: 150px; }
+    .orbital-ring { width: 500px; height: 500px; right: -50px; margin-top: -250px; }
             .title { font-size: 3.5rem; }
             .stats-bar { grid-template-columns: repeat(2, 1fr); }
         }
-        @media (max-width: 768px) {
-            .title { font-size: 2.5rem; }
-            .stats-bar { grid-template-columns: 1fr; gap: 1.5rem; }
-            .hero-actions { flex-direction: column; }
-        }
+@media (max-width: 768px) {
+    .title { font-size: 2.5rem; }
+    .stats-bar { grid-template-columns: 1fr; gap: 1.5rem; }
+    .hero-actions { flex-direction: column; }
+    .hero-graphics { --orbit-r: 105px; }
+}
     </style>
 </head>
 <body>
@@ -176,17 +193,17 @@
         </div>
         
         <div class="hero-graphics">
-            <div class="top-badge"><i class="fas fa-star"></i> 5000+ AI & Cloud Services Compared</div>
-            <div class="orbital-ring"></div>            <div class="floating-logo logo-aws"><img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS"></div>
-            <div class="floating-logo logo-azure"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a8/Microsoft_Azure_Logo.svg" alt="Azure"></div>
-            <div class="floating-logo logo-gcp"><img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Google_Cloud_logo.svg" alt="GCP"></div>
-            <div class="floating-logo logo-oci"><img src="https://upload.wikimedia.org/wikipedia/commons/5/50/Oracle_logo.svg" alt="Oracle"></div>
-            <div class="floating-logo logo-alibaba"><img src="https://upload.wikimedia.org/wikipedia/commons/b/b3/AlibabaCloudLogo.svg" alt="Alibaba Cloud"></div>
-            
-            <div class="floating-logo logo-anthropic"><img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Anthropic_logo.svg" alt="Anthropic"></div>
-            <div class="floating-logo logo-gemini"><img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Gemini_sparkle_v002.svg" alt="Google Gemini"></div>
-            <div class="floating-logo logo-groq"><img src="https://upload.wikimedia.org/wikipedia/commons/c/cc/Groq_logo.svg" alt="Groq"></div>
-        </div>
+        <div class="top-badge"><i class="fas fa-star"></i> 5000+ AI & Cloud Services Compared</div>
+        <div class="orbital-ring"></div>
+        <div class="orbit-slot" style="--i: 0"><div class="floating-logo logo-aws"><img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS"></div></div>
+        <div class="orbit-slot" style="--i: 1"><div class="floating-logo logo-azure"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a8/Microsoft_Azure_Logo.svg" alt="Azure"></div></div>
+        <div class="orbit-slot" style="--i: 2"><div class="floating-logo logo-gcp"><img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Google_Cloud_logo.svg" alt="GCP"></div></div>
+        <div class="orbit-slot" style="--i: 3"><div class="floating-logo logo-oci"><img src="https://upload.wikimedia.org/wikipedia/commons/5/50/Oracle_logo.svg" alt="Oracle"></div></div>
+        <div class="orbit-slot" style="--i: 4"><div class="floating-logo logo-alibaba"><img src="https://upload.wikimedia.org/wikipedia/commons/b/b3/AlibabaCloudLogo.svg" alt="Alibaba Cloud"></div></div>
+        <div class="orbit-slot" style="--i: 5"><div class="floating-logo logo-anthropic"><img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Anthropic_logo.svg" alt="Anthropic"></div></div>
+        <div class="orbit-slot" style="--i: 6"><div class="floating-logo logo-gemini"><img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Gemini_sparkle_v002.svg" alt="Google Gemini"></div></div>
+        <div class="orbit-slot" style="--i: 7"><div class="floating-logo logo-groq"><img src="https://upload.wikimedia.org/wikipedia/commons/c/cc/Groq_logo.svg" alt="Groq"></div></div>
+    </div>
     </main>
 
     <div class="stats-bar-wrapper">
