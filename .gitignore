@@ -1,0 +1,131 @@
+# Maven
+/target/
+/pom.xml.tag
+/pom.xml.releaseBackup
+/pom.xml.versionsBackup
+/pom.xml.next
+/release.properties
+/dependency-reduced-pom.xml
+/.flattened-pom.xml
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-*
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.metadata
+.mymetadata
+
+# Eclipse
+.settings/
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.loadpath
+.factorypath
+
+# IntelliJ IDEA
+*.iml
+*.iws
+*.ipr
+out/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Runtime
+logs/
+*.log
+*.log.*
+
+# Build
+dist/
+build/
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# OS
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Node (if frontend uses npm)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.h2.db
+
+# System files
+.venv/
+venv/
+env/
+
+# IDE generated files
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Gradle (if applicable)
+.gradle/
+gradle/
+
+# STS (Spring Tool Suite)
+.apt_generated
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# ctags
+tags
+
+# Temporary files
+*.tmp
+*.temp
+~$*
+
+# Archives
+*.zip
+*.rar
+*.7z
+*.tar.gz
+
+# Compiled Java
+*.class
+*.jar
+*.war
+*.ear

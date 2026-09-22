@@ -1,0 +1,32 @@
+* text=auto
+
+# Java files
+*.java text eol=lf
+*.class binary
+
+# Maven
+pom.xml text eol=lf
+mvnw text eol=lf
+mvnw.cmd text eol=crlf
+
+# Web files
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.txt text eol=lf
+
+# Config files
+*.properties text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Binary files
+*.jar binary
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary

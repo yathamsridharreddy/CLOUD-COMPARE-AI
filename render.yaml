@@ -1,0 +1,32 @@
+# CloudCompare AI: Spring Boot API and managed PostgreSQL.
+# Supply secrets and the actual frontend origin privately in Render.
+
+services:
+  - type: web
+    name: cloudcompare-ai-api
+    runtime: docker
+    branch: main
+    dockerfilePath: ./Dockerfile.render
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: JWT_SECRET
+        sync: false
+      - key: GROK_API_KEYS
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cloudcompare-db
+          property: connectionString
+      - key: SPRING_JPA_DATABASE_PLATFORM
+        value: org.hibernate.dialect.PostgreSQLDialect
+      # Preserve registered users on subsequent redeploys.
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: "update"
+
+databases:
+  - name: cloudcompare-db
+    plan: free
